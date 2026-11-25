@@ -3,6 +3,11 @@
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>スタッフ入口（見本）</title>
 <link rel="stylesheet" href="style.css?v=14">
+<style>
+/* ボタンが画面に収まっているあいだは、画面全体を動かさない（スクロールしない） */
+html.lock,html.lock body{height:100%;overflow:hidden;overscroll-behavior:none}
+html.lock body{position:fixed;inset:0;min-height:0}
+</style>
 </head><body class="home"><div class="wrap">
 
 <button class="mockbar mock-tag" id="mockTag" title="表示するデータを切り替える">見本</button>
@@ -104,5 +109,11 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
   document.getElementById('wbox').innerHTML=rows.join('')+
    `<div class="temps"><span class="hi">${Math.round(d.daily.temperature_2m_max[0])}℃</span><span class="lo">${Math.round(d.daily.temperature_2m_min[0])}℃</span></div>`;
 }).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
+</script>
+<script>
+// 収まりきらなくなったとき（ボタンが増えた・とても小さい画面）だけ、スクロールできるようにもどす
+(()=>{const w=document.querySelector('.wrap'),H=document.documentElement;
+const fit=()=>{H.classList.add('lock');if(w.scrollHeight>w.clientHeight+1)H.classList.remove('lock')};
+addEventListener('load',fit);addEventListener('resize',fit);fit();})();
 </script>
 </body></html>
