@@ -4,9 +4,10 @@
 <title>Q&amp;A（見本）</title>
 <link rel="stylesheet" href="style.css?v=14">
 <style>
-html,body{height:100%;overflow:hidden}
-/* 上のバーと下の入力欄は動かさず、間の会話だけをスクロールする */
-body{position:fixed;left:0;right:0;top:0;height:100%;display:flex;flex-direction:column}
+/* 上のバーと下の入力欄は動かさず、間の会話だけをスクロールする。
+   高さは「いま見えている画面の高さ」(dvh)。iPhoneの下のツールバーの上に収まる */
+html{height:100%;overflow:hidden}
+body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .top,.bar{flex:none}
 .top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid #dde1e5}
 .back{font-size:17px;font-weight:700;background:var(--bg);border:0;border-radius:12px;padding:10px 14px;color:var(--ink);text-decoration:none}
@@ -100,9 +101,10 @@ function stop(keepMsg){
 }
 </script>
 <script>
-// iPhone でキーボードが出たときも、入力欄が見える高さに合わせる
-(()=>{const vv=window.visualViewport;if(!vv)return;const fit=()=>{document.body.style.height=vv.height+'px';document.body.style.top=vv.offsetTop+'px';log.scrollTop=log.scrollHeight};
-vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);fit();})();
+// iPhone でキーボードが出ているときだけ、キーボードの上までの高さにする（閉じたら元にもどす）
+(()=>{const vv=window.visualViewport;if(!vv)return;const b=document.body;
+const fit=()=>{if(vv.height<innerHeight-120){b.style.height=vv.height+'px';scrollTo(0,0);log.scrollTop=log.scrollHeight}else b.style.height=''};
+vv.addEventListener('resize',fit);})();
 </script>
 <script src="links.js?v=1"></script><script>document.getElementById('baseAI').href=LINKS.board()</script>
 </body></html>
