@@ -22,15 +22,19 @@ body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-d
 .ask-admin{margin-top:10px;font-size:15px;font-weight:700;background:#fff4e0;border:1px solid #f0c98a;border-radius:12px;padding:8px 12px;color:#8a5a00}
 .bar{background:#fff;border-top:1px solid #dde1e5;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
 .inner{max-width:440px;margin:0 auto}
-.status{text-align:center;font-size:15px;color:var(--sub);min-height:22px;margin-bottom:6px}
+.status{text-align:center;font-size:15px;color:var(--sub);margin-bottom:6px}
+.status:empty{display:none}
 .status.on{color:var(--red);font-weight:700}
-.mic{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:76px;border:0;border-radius:20px;background:var(--accent);color:#fff;font-size:22px;font-weight:700;cursor:pointer}
-.mic .ic{font-size:34px}
+/* 入力欄の中にマイク（右はし） */
+.kb{display:flex;gap:8px;align-items:center}
+.field{position:relative;flex:1;min-width:0}
+.field input{width:100%;font-size:17px;padding:13px 58px 13px 14px;border:1px solid #c9ced4;border-radius:24px;background:#fff}
+.mic{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .mic.on{background:var(--red);animation:pulse 1.2s infinite}
-@keyframes pulse{50%{opacity:.75}}
-.kb{display:flex;gap:8px;margin-top:10px}
-.kb input{flex:1;font-size:17px;padding:12px 14px;border:1px solid #c9ced4;border-radius:14px;min-width:0}
-.kb button{font-size:17px;font-weight:700;border:0;border-radius:14px;padding:0 18px;background:var(--ink);color:#fff;cursor:pointer}
+.mic.off{background:#c9ced4}
+@keyframes pulse{50%{opacity:.6}}
+.kb .send{flex:none;height:50px;font-size:17px;font-weight:700;border:0;border-radius:25px;padding:0 18px;background:var(--ink);color:#fff;cursor:pointer}
 </style>
 </head><body>
 
@@ -39,7 +43,7 @@ body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-d
 <div class="log" id="log">
   <div class="mockbar">見本です。AIはまだつながっていません。答えは決まった例を出します。</div>
   <a class="hint" id="baseAI" style="display:block;background:#fff4e0;color:inherit;text-decoration:none;margin-bottom:8px">✨ <b>いまはここから</b>：HUKU BASE の「AIに聞く」を開く ›<br><small>この画面の AI はまだつながっていません</small></a>
-  <div class="hint">🎤 を押して、話しかけてください。<br>文字で打ってもかまいません。<br>業務マニュアルと掲示板から答えを探します。</div>
+  <div class="hint">入力欄の 🎤 を押して、話しかけてください。<br>文字で打ってもかまいません。<br>業務マニュアルと掲示板から答えを探します。</div>
   <div class="msg me"><div class="b">電話でコロナの検査費用を聞かれたら、いくらって答えればいい？</div></div>
   <div class="msg ai"><div class="b">コロナの検査は 1,600円 程度、インフルエンザは 1,000円 程度とご案内しています（保険3割負担の場合のめやす）。
 <a class="src" href="#">📖 業務マニュアル「電話での検査費用の案内」（11/20 更新）</a></div></div>
@@ -47,16 +51,18 @@ body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-d
 
 <div class="bar"><div class="inner">
   <div class="status" id="status"></div>
-  <button class="mic" id="mic"><span class="ic">🎤</span><span id="micLabel">押して話す</span></button>
   <form class="kb" id="form">
-    <input id="q" placeholder="ここに文字で質問を入力" enterkeyhint="send" autocomplete="off">
-    <button>送る</button>
+    <div class="field">
+      <input id="q" placeholder="ここに質問を入力" enterkeyhint="send" autocomplete="off">
+      <button type="button" class="mic" id="mic" aria-label="声で入力">🎤</button>
+    </div>
+    <button class="send">送る</button>
   </form>
 </div></div>
 
 <script>
 const log=document.getElementById('log'), q=document.getElementById('q'),
-      mic=document.getElementById('mic'), micLabel=document.getElementById('micLabel'),
+      mic=document.getElementById('mic'),
       status=document.getElementById('status');
 
 function add(cls,html){
@@ -77,7 +83,7 @@ document.getElementById('form').addEventListener('submit',e=>{e.preventDefault()
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null, listening=false;
 if(!SR){
-  micLabel.textContent='この端末では使えません';
+  mic.classList.add('off');
   mic.addEventListener('click',()=>{status.textContent='キーボードのマイク（🎤）で話して入力してください';q.focus()});
 }else{
   rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false;
@@ -92,11 +98,11 @@ if(!SR){
 }
 function start(){
   try{rec.start()}catch(_){}
-  listening=true; mic.classList.add('on'); micLabel.textContent='聞いています…（押すと止まる）';
-  status.className='status on'; status.textContent='● 話してください';
+  listening=true; mic.classList.add('on');
+  status.className='status on'; status.textContent='● 話してください（🎤をもう一度押すと止まります）';
 }
 function stop(keepMsg){
-  listening=false; mic.classList.remove('on'); micLabel.textContent='押して話す';
+  listening=false; mic.classList.remove('on');
   status.className='status'; if(!keepMsg) status.textContent='';
 }
 </script>
