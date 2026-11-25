@@ -80,30 +80,44 @@ function ask(text){
 document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();ask(q.value)});
 
 // 音声入力（Chrome・Android・iPhone の Safari で使える）
+// iPhone では「同じ聞き取り係を使い回す」と2回目から文字が返ってこないことがあるので、毎回新しく作る。
+// また、iPhone は「確定」の合図を出さずに終わることがあるので、終わった時点で聞き取れた文字を使う。
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false;
+let rec=null, listening=false, heard='', sent=false;
 if(!SR){
   mic.classList.add('off');
   mic.addEventListener('click',()=>{status.textContent='キーボードのマイク（🎤）で話して入力してください';q.focus()});
 }else{
+  mic.addEventListener('pointerdown',e=>e.preventDefault()); // 押したときに入力欄へカーソルが移らないように
+  mic.addEventListener('click',()=>listening?finish():start());
+}
+function start(){
+  q.blur(); // キーボードを閉じてから聞く（キーボードの音声入力とぶつからないように）
+  heard=''; sent=false; q.value='';
   rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false;
   rec.onresult=e=>{
     let t=''; for(const r of e.results) t+=r[0].transcript;
-    q.value=t;
-    if(e.results[e.results.length-1].isFinal){ stop(); ask(t); }
+    heard=t; q.value=t; status.textContent='● '+t;
+    if(e.results[e.results.length-1].isFinal) finish();
   };
-  rec.onerror=e=>{status.textContent=e.error==='not-allowed'?'マイクの使用が許可されていません':'聞き取れませんでした。もう一度どうぞ';stop(true)};
-  rec.onend=()=>stop(true);
-  mic.addEventListener('click',()=>listening?rec.stop():start());
-}
-function start(){
+  rec.onerror=e=>{
+    if(e.error==='aborted') return;
+    status.className='status';
+    status.textContent=e.error==='not-allowed'?'マイクの使用が許可されていません（設定 → Safari → マイク）':
+      e.error==='no-speech'?'声が聞こえませんでした。もう一度どうぞ':'聞き取れませんでした。もう一度どうぞ';
+    listening=false; mic.classList.remove('on');
+  };
+  rec.onend=()=>finish(true);
   try{rec.start()}catch(_){}
   listening=true; mic.classList.add('on');
   status.className='status on'; status.textContent='● 話してください（🎤をもう一度押すと止まります）';
 }
-function stop(keepMsg){
+function finish(ended){
+  if(!listening&&ended) return;
   listening=false; mic.classList.remove('on');
-  status.className='status'; if(!keepMsg) status.textContent='';
+  if(!ended&&rec){try{rec.stop()}catch(_){}}
+  if(heard.trim()&&!sent){sent=true; status.className='status'; status.textContent=''; ask(heard)}
+  else if(!heard.trim()&&ended&&status.classList.contains('on')){status.className='status'; status.textContent='声が聞こえませんでした。もう一度どうぞ'}
 }
 </script>
 <script>
