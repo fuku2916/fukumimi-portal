@@ -29,10 +29,12 @@
 .dl .p{width:54px;white-space:nowrap;text-align:right;color:#1f6fb2;font-size:13px}
 .dl .hi{color:#e5484d;font-weight:800;width:38px;text-align:right;background:none}
 .dl .lo{color:#3b82f6;font-weight:800;width:38px;text-align:right;background:none}
+.top .today{margin-left:auto;font-size:18px;font-weight:700;white-space:nowrap}
+.top .today.sun{color:#e5484d}.top .today.sat{color:#1f6fb2}
 .src{font-size:12px;color:var(--sub);text-align:center;margin:4px 0 16px}
 </style>
 </head><body>
-<div class="top"><a class="back" href="index.html">← もどる</a><h1>天気</h1></div>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1>天気</h1><span class="today" id="today"></span></div>
 <div class="wrap">
   <div class="tabs" id="tabs"></div>
   <div class="box"><h3 id="nowTitle">いまの天気</h3><div id="now">読み込み中…</div></div>
@@ -50,6 +52,8 @@ const $=id=>document.getElementById(id);
 const ICON=(c,day=1)=>c<=1&&!day?'🌙':c===2&&!day?'☁️':c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':c<=86?'🌨️':'⛈️';
 const WORD=c=>c===0?'晴れ':c<=2?'晴れ時々くもり':c===3?'くもり':c<=48?'きり':c<=55?'霧雨':c<=57?'着氷性の霧雨':c<=63?'雨':c<=65?'強い雨':c<=67?'みぞれ':c<=75?'雪':c===77?'あられ':c<=81?'にわか雨':c===82?'激しいにわか雨':c<=86?'にわか雪':'雷雨';
 const WD=['日','月','火','水','木','金','土'];
+// 上のバーに今日の日付と曜日（例：11月26日（水））
+(()=>{const d=new Date(),w=d.getDay(),el=$('today');el.textContent=`${d.getMonth()+1}月${d.getDate()}日（${WD[w]}）`;if(w===0)el.classList.add('sun');if(w===6)el.classList.add('sat')})();
 function tabs(){$('tabs').innerHTML=Object.entries(PLACES).map(([k,p])=>`<button class="${k===key?'on':''}" data-k="${k}">${p.name}<br><small style="font-weight:400">${p.sub}</small></button>`).join('')}
 $('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;key=b.dataset.k;history.replaceState(null,'','?in='+key);load()};
 function load(){

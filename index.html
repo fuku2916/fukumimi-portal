@@ -7,6 +7,8 @@
 /* ボタンが画面に収まっているあいだは、画面全体を動かさない（スクロールしない） */
 html.lock,html.lock body{height:100%;overflow:hidden;overscroll-behavior:none}
 html.lock body{position:fixed;inset:0;min-height:0}
+/* 天気の欄の下の地名は、はみ出して半分だけ見えるので出さない */
+.home .wplace{display:none}
 </style>
 </head><body class="home"><div class="wrap">
 
