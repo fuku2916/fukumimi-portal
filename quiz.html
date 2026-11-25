@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>質問とお話（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+.ptbar{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px 14px}
+.ptbig{font-size:26px;font-weight:800;border-radius:14px;padding:6px 14px;min-width:84px;text-align:center;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.ptinfo{font-size:14px;line-height:1.6}
+.ptinfo b{font-size:16px}
+.gauge{height:10px;border-radius:5px;background:#e6ebe7;overflow:hidden;margin-top:4px}
+.gauge i{display:block;height:100%;border-radius:5px}
+.qbox{background:#fff;border-radius:18px;padding:16px;margin-top:12px}
+.qbox .lbl{font-size:14px;color:var(--sub)}
+.qbox h2{font-size:19px;line-height:1.6;margin:6px 0 12px}
+.ch{display:flex;align-items:center;gap:10px;width:100%;font:inherit;font-size:17px;text-align:left;border:2px solid #dde1e5;background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+.ch.on{border-color:#2F7D5B;background:#ECFDF5;font-weight:700}
+textarea{width:100%;font:inherit;font-size:16px;border:1px solid #c9ced4;border-radius:12px;padding:10px;min-height:70px}
+.go{width:100%;font:inherit;font-size:19px;font-weight:800;border:0;border-radius:16px;padding:14px;margin-top:10px;background:#2F7D5B;color:#fff;cursor:pointer}
+.go:disabled{background:#c9ced4;cursor:default}
+.done{background:#ECFDF5;border-radius:14px;padding:12px 14px;font-size:16px;font-weight:700;color:#065F46;margin-top:10px}
+.toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.8);opacity:0;transition:.25s;background:rgba(31,35,40,.92);color:#fff;font-size:28px;font-weight:800;border-radius:20px;padding:18px 28px;z-index:9;pointer-events:none;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ranks{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.rk{display:flex;align-items:center;gap:10px;font-size:15px}
+.rk span{display:inline-block;min-width:92px;text-align:center;font-weight:800;border-radius:10px;padding:4px 8px;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.test{margin-top:14px;font-size:13px;color:var(--sub);background:#fff;border-radius:14px;padding:10px 12px}
+.test input{width:100%}
+</style>
+</head><body>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1 id="h1">質問とお話</h1></div>
+<div class="wrap">
+  <div class="ptbar"><div class="ptbig" id="ptBig">0P</div><div class="ptinfo" style="flex:1"><b id="ptRank"></b>　<span id="ptPeriod"></span><div id="ptNext"></div><div class="gauge"><i id="ptGauge"></i></div></div></div>
+
+  <div class="qbox">
+    <div class="lbl">今日の質問　<b>答えると ＋4P</b></div>
+    <h2 id="qText"></h2>
+    <div id="choices"></div>
+    <textarea id="memo" placeholder="くわしく教えてください（金額が変わったときなど）"></textarea>
+    <button class="go" id="ansBtn">回答する（＋4P）</button>
+    <div id="ansDone"></div>
+  </div>
+
+  <div class="qbox">
+    <div class="lbl">今日のお話　<b>読んだら ＋1P</b></div>
+    <h2 id="sTitle"></h2>
+    <div id="sBody" style="font-size:17px;line-height:1.8"></div>
+    <button class="go" id="readBtn" style="background:#86198F">読みました（＋1P）</button>
+    <div id="readDone"></div>
+  </div>
+
+  <div class="qbox">
+    <div class="lbl">ランク（毎月11日〜翌月10日のポイントで決まります）</div>
+    <div class="ranks" id="ranks"></div>
+  </div>
+  <div class="test">🔧 試験用：ポイントを動かして色を見る <b id="testV"></b><input type="range" min="0" max="130" id="testR"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="real.js?v=2"></script><script src="points.js?v=1"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const name=(typeof RM!=='undefined'&&RM.me)?(RM.me.family||RM.me.name.split(/[\s　]/)[0]):'山田';
+$('h1').textContent=name+'さんへの質問';
+// 質問（本物のデータがあればその人の職種の質問）
+let qRaw='電話で検査費用を聞かれたら、今もこの金額で案内していますか？「コロナ1,600円、インフルエンザ1,000円程度」　①はい　②金額が変わった（教えてください）';
+if(typeof RM!=='undefined'&&RM.on&&RM.me&&REAL.quiz[RM.me.job]&&REAL.quiz[RM.me.job][0]) qRaw=REAL.quiz[RM.me.job][0].q;
+const parts=qRaw.split(/\s*(?=[①-⑳])/); $('qText').textContent=parts[0];
+const chs=parts.slice(1); let pick=null;
+$('choices').innerHTML=chs.map((c,i)=>`<button class="ch" data-i="${i}">${esc(c)}</button>`).join('');
+$('choices').onclick=e=>{const b=e.target.closest('.ch');if(!b)return;pick=+b.dataset.i;document.querySelectorAll('.ch').forEach(x=>x.classList.toggle('on',x===b));check()};
+$('memo').oninput=check;
+function check(){$('ansBtn').disabled=!!PTS.today().ans||(pick===null&&$('memo').value.trim().length<5)}
+// お話（本物のデータがあれば85話から日替わり）
+let st={title:'チェックリストが生まれた日',story:'（仮の文章）ある飛行機の試験飛行で、腕ききの操縦士がたった一つの手順を忘れたために事故が起きました。そこで生まれたのが、誰でも同じ順番で確かめられる「チェックリスト」でした。',lesson:'慣れている人ほど、確かめる。'};
+if(typeof REAL!=='undefined'&&typeof RM!=='undefined'&&RM.on) st=REAL.stories[Math.floor(Date.now()/864e5)%REAL.stories.length];
+$('sTitle').textContent=st.title;
+$('sBody').innerHTML=esc(st.story).split(/\n+/).map(t=>`<p style="margin:0 0 8px">${t}</p>`).join('')+(st.lesson?`<div class="lesson">💡 ${esc(st.lesson)}</div>`:'');
+
+function toast(t){const e=$('toast');e.innerHTML=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1400)}
+function render(){
+  const p=PTS.total(),r=PTS.paint($('ptBig'),p),n=PTS.next(p),per=PTS.period();
+  $('ptRank').textContent=r.name+'ランク'; $('ptPeriod').textContent=`（${per.label}）`;
+  $('ptNext').textContent=n?`あと ${n.need}P で ${n.name}`:'最高ランクです！';
+  const lo=r.min<0?0:r.min, hi=n?p+n.need:p; $('ptGauge').style.cssText=`width:${n?Math.round((p-lo)/(hi-lo)*100):100}%;background:${r.bg}`;
+  const t=PTS.today();
+  $('ansDone').innerHTML=t.ans?'<div class="done">✅ 今日の質問は回答ずみ（＋4P）</div>':''; $('ansBtn').hidden=!!t.ans;
+  $('readDone').innerHTML=t.read?'<div class="done" style="background:#FDF2F8;color:#86198F">✅ 今日のお話は読みました（＋1P）</div>':''; $('readBtn').hidden=!!t.read;
+  check(); $('testR').value=p; $('testV').textContent=p+'P';
+}
+$('ansBtn').onclick=()=>{const g=PTS.add('ans');if(g){toast('＋4P<br><small style="font-size:16px">回答ありがとうございます</small>')}render()};
+$('readBtn').onclick=()=>{const g=PTS.add('read');if(g){toast('＋1P')}render()};
+$('ranks').innerHTML=PTS.RANKS.slice().reverse().map(r=>`<div class="rk"><span style="background:${r.bg};color:${r.fg}">${r.name}</span>${r.min<0?'20P まで':r.min+'P を超えたら'}</div>`).join('');
+$('testR').oninput=e=>{PTS.setForTest(+e.target.value);render()};
+render();
+</script>
+</body></html>

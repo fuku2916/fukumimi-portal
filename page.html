@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スタッフ入口（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+</head><body>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1 id="h1"></h1></div>
+<div class="wrap" id="main"></div>
+<script src="real.js?v=2"></script><script src="links.js?v=1"></script><script>
+const P=new URLSearchParams(location.search).get('p')||'board';
+const $=id=>document.getElementById(id);
+// url があれば本番のその画面へ飛ぶ（アプリの中身は変えない）。無ければ見本の案内を出す。
+const go=(what,url)=>url?`href="${url}"`:`href="#" onclick="alert('（見本）本番では ${what} が開きます');return false"`;
+const CLINIC={ekimae:['駅前','#185FA5'],all:['全体','#5B6470'],iguchi:['いぐち','#2F7D5B'],mizutani:['みずたに','#8A5A00']};
+const chip=k=>`<span class="chip" style="background:${CLINIC[k][1]}">${CLINIC[k][0]}</span>`;
+
+const PAGES={
+ board:{t:'掲示板',html:()=>`
+  <div class="mockbar">見本です。本番では HUKU BASE の掲示板（自分の院と「全体」）を新しい順に出します。</div>
+  <div class="sec">新しいお知らせ</div>
+  ${[['ekimae','本日、駅前のクラーク１名欠勤です','今日 7:50・事務',1],
+     ['ekimae','３月９日〜１０日、○○先生が学会のため休診','11/24・院長',1],
+     ['all','年末調整の書類は１２月１０日までに','11/20・本社総務',0],
+     ['all','忘年会のお知らせ（12/19 金）','11/18・本社総務',0],
+     ['ekimae','吸引器のフィルターを新しい型に変えました（写真あり）','11/15・看護師',0]]
+    .map(([c,t,m,u])=>`<a class="row ${u?'unread':''}" ${go('HUKU BASE のこの投稿',LINKS.board())}><span><div class="tt">${chip(c)}${t}</div><small>${m}${u?'　<b style="color:var(--red)">● 未読</b>':''}</small></span></a>`).join('')}
+  <a class="big-btn" ${go('',LINKS.board())}>📋 掲示板をすべて見る・投稿する</a>`},
+
+ manual:{t:'業務マニュアル',html:()=>`
+  <div class="mockbar">見本です。目次は HUKU BASE の業務マニュアルの11の分類そのままです。押すと HUKU BASE のその目次が開きます。</div>
+  <a class="row" href="qa.html" style="background:#fff4e0"><span class="ic">🎤</span><span><div class="tt">探すより聞くほうが早い！</div><small>Q&amp;A で話しかけると、マニュアルから答えを探します</small></span></a>
+  <div class="sec">目次</div>
+  <div class="g2">${[['🩺','検査',42],['📞','受付・予約',58],['🙇','接遇・研修・勉強会',21],['💊','診察室・カルテ・処方',47],['💴','会計',19],['📦','準備・片付け・物品',33],['🧴','洗浄・消毒・感染対策',26],['🏥','手術',38],['💻','機器・パソコン操作',29],['📄','保険・公費・書類',24],['📘','法人のルール・労務',15]]
+    .map(([i,n,c])=>`<a class="cat" ${go('',LINKS.manual())}><span class="ic">${i}</span>${n}<small>${c}件</small></a>`).join('')}</div>
+  <div class="sec">最近かわったところ</div>
+  <a class="row unread" ${go('',LINKS.manual())}><span class="ic">📞</span><span><div class="tt">電話での検査費用の案内</div><small>11/20 更新・受付・予約</small></span></a>`},
+
+ shift:{t:'シフト管理',html:()=>{
+  const d=new Date(); const days=[...Array(7)].map((_,i)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+i));
+  const plan=['8:45〜17:45','8:45〜17:45','休み','9:45〜18:45','10:45〜19:45','8:45〜13:00','休み'];
+  return `<div class="mockbar">見本です。本番ではシフト管理アプリ（駅前・自分の職種）から自分の予定を読み、ボタンでシフト表を開きます。</div>
+  <div class="sec">これから7日間の自分のシフト</div>
+  ${days.map((x,i)=>`<div class="row" style="${i===0?'outline:3px solid var(--accent)':''}"><span style="min-width:84px;font-size:17px;font-weight:700;color:${x.getDay()===0?'#DC2626':x.getDay()===6?'#185FA5':'inherit'}">${x.getMonth()+1}/${x.getDate()}（${'日月火水木金土'[x.getDay()]}）</span><span class="tt" style="${plan[i]==='休み'?'color:var(--sub)':''}">${i===0?'今日　':''}${plan[i]}</span></div>`).join('')}
+  <a class="big-btn" ${go('',LINKS.shift())}>📅 シフト表を開く</a>
+  <div class="note" style="font-size:13px;color:var(--sub);margin-top:8px">有給や休みの希望は、トップ画面の「申請」からどうぞ。</div>`}},
+
+ kokoro:{t:'こころがけ',html:()=>`
+  <div class="mockbar">見本です。本番では HUKU BASE にある「おはなし」（いま85話）から、毎日1話を出します。文章はここでは仮のものです。</div>
+  <div class="paper">
+    <div style="font-size:14px;color:var(--sub)">今日のおはなし　11/25</div>
+    <h2>チェックリストが生まれた日</h2>
+    <p>（仮の文章）ある飛行機の試験飛行で、腕ききの操縦士が、たった一つの手順を忘れたために事故が起きました。そこで生まれたのが、誰でも同じ順番で確かめられる「チェックリスト」でした。</p>
+    <div class="lesson">💡 慣れている人ほど、確かめる。<br>「いつもの作業」こそ、手順どおりに。</div>
+  </div>
+  <a class="big-btn" style="background:#86198F" href="#" onclick="alert('（見本）本番では、これまでのおはなしの一覧が開きます');return false">📚 これまでのおはなし</a>`},
+
+ knowledge:{t:'仕事に必要な知識',html:()=>`
+  <div class="mockbar">見本です。中身は先生と相談して決める部分です。ここでは「1日1問のクイズ」と「分野ごとの基礎知識」の形にしてみました。</div>
+  <div class="paper">
+    <div style="font-size:14px;color:var(--sub)">今日の1問</div>
+    <h2 style="font-size:19px">鼻出血の患者さんから電話。まず伝えることは？</h2>
+    <div id="qz">${['① 上を向いて安静にしてもらう','② 下を向いて小鼻をつまんでもらう','③ すぐに鼻をかんでもらう'].map((c,i)=>`<button class="row" style="width:100%;border:2px solid #dde1e5;font:inherit;cursor:pointer" onclick="ans(${i})"><span class="tt">${c}</span></button>`).join('')}</div>
+    <div id="res"></div>
+  </div>
+  <div class="sec">分野ごとの基礎知識</div>
+  <div class="g2">${[['👂','耳の病気'],['👃','鼻の病気'],['🗣️','のど・声'],['💊','よく出る薬'],['🧪','検査の意味'],['📄','保険のしくみ']].map(([i,n])=>`<a class="cat" ${go('「'+n+'」の解説')}><span class="ic">${i}</span>${n}</a>`).join('')}</div>`},
+
+ line:{t:'LINE',html:()=>`
+  <div class="mockbar">見本です。どの LINE を開くか（法人の公式アカウント・院ごとのグループなど）は、先生に決めていただく部分です。</div>
+  <div class="paper" style="text-align:center">
+    <div class="line-ic" style="margin:6px auto 12px;width:84px;height:84px;font-size:22px;border-radius:20px">LINE</div>
+    <p>LINE のアプリを開きます。</p>
+    <a class="big-btn" style="background:#06c755" ${go('LINE（駅前クリニックのグループ）')}>駅前クリニックのグループを開く</a>
+    <a class="big-btn" style="background:#06c755" ${go('LINE（福耳会 全体のお知らせ）')}>福耳会 全体のお知らせを開く</a>
+  </div>`},
+};
+// ── 本物のデータ（Box の控え）で見るときの中身 ──
+if(RM.on&&RM.me){
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const BK={'駅前':'ekimae','本部':'all','いぐち':'iguchi','みずたに':'mizutani'};
+  const note=`<div class="mockbar" style="background:#E8F5E9;border-color:#2F7D5B;color:#1F5F3F">本物のデータ：${esc(RM.label)}。${esc(RM.me.name)}さんとして表示しています。</div>`;
+  const ICON={'検査':'🩺','受付・予約':'📞','接遇・研修・勉強会':'🙇','診察室・カルテ・処方':'💊','会計':'💴','準備・片付け・物品':'📦','洗浄・消毒・感染対策':'🧴','手術':'🏥','機器・パソコン操作':'💻','保険・公費・書類':'📄','法人のルール・労務':'📘','未分類':'📁'};
+  PAGES.board.html=()=>note+`<div class="sec">新しいお知らせ（駅前・全体）</div>`+RM.myBoard.slice(0,15).map(x=>{const u=!RM.isRead(x.id);
+     return `<a class="row ${u?'unread':''}" ${go('HUKU BASE のこの投稿',LINKS.post(x.id))}><span><div class="tt">${chip(BK[x.badge]||'all')}${esc(x.title)}</div><small>${rmDate(x.at)}${u?'　<b style="color:var(--red)">● 未読</b>':''}</small></span></a>`}).join('')
+     +`<a class="big-btn" ${go('',LINKS.board())}>📋 掲示板をすべて見る・投稿する</a>`;
+  PAGES.manual.html=()=>note+`<a class="row" href="qa.html" style="background:#fff4e0"><span class="ic">🎤</span><span><div class="tt">探すより聞くほうが早い！</div><small>Q&amp;A で話しかけると、マニュアルから答えを探します</small></span></a>
+     <div class="sec">目次</div><div class="g2">${REAL.manual.cats.map(c=>`<a class="cat" ${go('',LINKS.manual())}><span class="ic">${ICON[c.name]||'📁'}</span>${esc(c.name)}<small>${c.count}件</small></a>`).join('')}</div>
+     <div class="sec">最近かわったところ</div>`+REAL.manual.recent.map(m=>`<a class="row" ${go('',LINKS.manual())}><span class="ic">${ICON[m.cat]||'📁'}</span><span><div class="tt">${esc(m.title)}</div><small>${rmDate(m.at)} 更新・${esc(m.cat)}</small></span></a>`).join('');
+  PAGES.shift.html=()=>{const rows=(REAL.shift[RM.me.code]||[]).slice(0,7);
+     return note+`<div class="sec">これから7日間の自分のシフト（${esc(RM.me.unit)}）</div>`+rows.map((r,i)=>{const x=new Date(r.d+'T00:00'),w=x.getDay();
+       return `<div class="row" style="${i===0?'outline:3px solid var(--accent)':''}"><span style="min-width:84px;font-size:17px;font-weight:700;color:${w===0?'#DC2626':w===6?'#185FA5':'inherit'}">${x.getMonth()+1}/${x.getDate()}（${'日月火水木金土'[w]}）</span><span class="tt" style="${r.t==='休み'?'color:var(--sub)':''}">${i===0?'今日　':''}${esc(r.t)}</span></div>`}).join('')
+       +`<a class="big-btn" ${go('',LINKS.shift())}>📅 シフト表を開く</a>`};
+  PAGES.kokoro.html=()=>{const s=REAL.stories[Math.floor(Date.now()/864e5)%REAL.stories.length];
+     return note+`<div class="paper"><div style="font-size:14px;color:var(--sub)">今日のおはなし</div><h2>${esc(s.title)}</h2>${esc(s.story).split(/\n+/).map(t=>`<p>${t}</p>`).join('')}${s.lesson?`<div class="lesson">💡 ${esc(s.lesson)}</div>`:''}</div>
+       <a class="big-btn" style="background:#86198F" ${go('これまでのおはなしの一覧')}>📚 これまでのおはなし（${REAL.stories.length}話）</a>`};
+}
+const pg=PAGES[P]||PAGES.board; $('h1').textContent=pg.t; document.title=pg.t+'（見本）'; $('main').innerHTML=pg.html();
+function ans(i){
+  document.querySelectorAll('#qz .row').forEach((b,j)=>{b.disabled=true;b.style.borderColor=j===1?'#10B981':j===i?'#DC2626':'#dde1e5';b.style.background=j===1?'#ECFDF5':''});
+  $('res').innerHTML=`<div class="lesson" style="background:${i===1?'#ECFDF5':'#FEF2F2'};border-color:${i===1?'#10B981':'#DC2626'}">${i===1?'⭕ 正解！ +5P':'❌ 正解は ②'}<br><span style="font-weight:400">上を向くと血がのどに流れて気分が悪くなります。下を向いて小鼻を10分ほど強くつまんでもらいます。（見本の問題）</span></div>`;
+}
+</script>
+</body></html>

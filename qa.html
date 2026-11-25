@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Q&amp;A（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+body{display:flex;flex-direction:column;height:100dvh}
+.top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid #dde1e5}
+.back{font-size:17px;font-weight:700;background:var(--bg);border:0;border-radius:12px;padding:10px 14px;color:var(--ink);text-decoration:none}
+.top h1{font-size:22px;margin:0}
+.log{flex:1;overflow-y:auto;padding:14px 12px;max-width:440px;width:100%;margin:0 auto}
+.hint{font-size:15px;color:var(--sub);background:#fff;border-radius:16px;padding:12px 14px;line-height:1.6}
+.msg{margin:12px 0;display:flex}
+.msg .b{max-width:85%;padding:12px 14px;border-radius:18px;font-size:17px;line-height:1.6;white-space:pre-wrap}
+.me{justify-content:flex-end}.me .b{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.ai .b{background:#fff;border-bottom-left-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.src{display:block;margin-top:8px;font-size:14px;color:#1f6fb2}
+.ask-admin{margin-top:10px;font-size:15px;font-weight:700;background:#fff4e0;border:1px solid #f0c98a;border-radius:12px;padding:8px 12px;color:#8a5a00}
+.bar{background:#fff;border-top:1px solid #dde1e5;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.inner{max-width:440px;margin:0 auto}
+.status{text-align:center;font-size:15px;color:var(--sub);min-height:22px;margin-bottom:6px}
+.status.on{color:var(--red);font-weight:700}
+.mic{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:76px;border:0;border-radius:20px;background:var(--accent);color:#fff;font-size:22px;font-weight:700;cursor:pointer}
+.mic .ic{font-size:34px}
+.mic.on{background:var(--red);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.75}}
+.kb{display:flex;gap:8px;margin-top:10px}
+.kb input{flex:1;font-size:17px;padding:12px 14px;border:1px solid #c9ced4;border-radius:14px;min-width:0}
+.kb button{font-size:17px;font-weight:700;border:0;border-radius:14px;padding:0 18px;background:var(--ink);color:#fff;cursor:pointer}
+</style>
+</head><body>
+
+<div class="top"><a class="back" href="index.html">← もどる</a><h1>Q&amp;A　AIに質問</h1></div>
+
+<div class="log" id="log">
+  <div class="mockbar">見本です。AIはまだつながっていません。答えは決まった例を出します。</div>
+  <a class="hint" id="baseAI" style="display:block;background:#fff4e0;color:inherit;text-decoration:none;margin-bottom:8px">✨ <b>いまはここから</b>：HUKU BASE の「AIに聞く」を開く ›<br><small>この画面の AI はまだつながっていません</small></a>
+  <div class="hint">🎤 を押して、話しかけてください。<br>文字で打ってもかまいません。<br>業務マニュアルと掲示板から答えを探します。</div>
+  <div class="msg me"><div class="b">電話でコロナの検査費用を聞かれたら、いくらって答えればいい？</div></div>
+  <div class="msg ai"><div class="b">コロナの検査は 1,600円 程度、インフルエンザは 1,000円 程度とご案内しています（保険3割負担の場合のめやす）。
+<a class="src" href="#">📖 業務マニュアル「電話での検査費用の案内」（11/20 更新）</a></div></div>
+</div>
+
+<div class="bar"><div class="inner">
+  <div class="status" id="status"></div>
+  <button class="mic" id="mic"><span class="ic">🎤</span><span id="micLabel">押して話す</span></button>
+  <form class="kb" id="form">
+    <input id="q" placeholder="ここに文字で質問を入力" enterkeyhint="send" autocomplete="off">
+    <button>送る</button>
+  </form>
+</div></div>
+
+<script>
+const log=document.getElementById('log'), q=document.getElementById('q'),
+      mic=document.getElementById('mic'), micLabel=document.getElementById('micLabel'),
+      status=document.getElementById('status');
+
+function add(cls,html){
+  const d=document.createElement('div'); d.className='msg '+cls;
+  d.innerHTML='<div class="b"></div>'; d.firstChild.innerHTML=html;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function ask(text){
+  text=text.trim(); if(!text) return;
+  add('me',esc(text)); q.value='';
+  setTimeout(()=>add('ai','（見本の答え）本番では、ここに AI が業務マニュアルと掲示板から探した答えと、その出典が出ます。<br>'+
+    '<button class="ask-admin" onclick="this.textContent=\'✓ 管理者に送りました（見本）\'">答えが違う・見つからない → 管理者に聞く</button>'),600);
+}
+document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();ask(q.value)});
+
+// 音声入力（Chrome・Android・iPhone の Safari で使える）
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, listening=false;
+if(!SR){
+  micLabel.textContent='この端末では使えません';
+  mic.addEventListener('click',()=>{status.textContent='キーボードのマイク（🎤）で話して入力してください';q.focus()});
+}else{
+  rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false;
+  rec.onresult=e=>{
+    let t=''; for(const r of e.results) t+=r[0].transcript;
+    q.value=t;
+    if(e.results[e.results.length-1].isFinal){ stop(); ask(t); }
+  };
+  rec.onerror=e=>{status.textContent=e.error==='not-allowed'?'マイクの使用が許可されていません':'聞き取れませんでした。もう一度どうぞ';stop(true)};
+  rec.onend=()=>stop(true);
+  mic.addEventListener('click',()=>listening?rec.stop():start());
+}
+function start(){
+  try{rec.start()}catch(_){}
+  listening=true; mic.classList.add('on'); micLabel.textContent='聞いています…（押すと止まる）';
+  status.className='status on'; status.textContent='● 話してください';
+}
+function stop(keepMsg){
+  listening=false; mic.classList.remove('on'); micLabel.textContent='押して話す';
+  status.className='status'; if(!keepMsg) status.textContent='';
+}
+</script>
+<script src="links.js?v=1"></script><script>document.getElementById('baseAI').href=LINKS.board()</script>
+</body></html>

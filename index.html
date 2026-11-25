@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スタッフ入口（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+</head><body class="home"><div class="wrap">
+
+<button class="mockbar mock-tag" id="mockTag" title="表示するデータを切り替える">見本</button>
+<div class="rm-panel" id="rmPanel" hidden>
+  <b>表示するデータ（試験用）</b>
+  <label><input type="radio" name="rmsrc" value="0"> 見本のデータ（作りもの）</label>
+  <label><input type="radio" name="rmsrc" value="1"> 本物のデータ（Box の控え）</label>
+  <div id="rmWho"><div style="margin-top:8px">だれとして見るか</div><select id="rmMe"></select></div>
+  <p class="note">本番には一切つながず、Box の毎朝のバックアップを読むだけです。変えたことはこの端末の中だけに覚えます。</p>
+  <button class="big-btn" id="rmApply" style="margin-top:8px;padding:10px">この内容で表示する</button>
+</div>
+
+<a class="card board" href="page.html?p=board">
+  <h2>本日の掲示板</h2>
+  <div class="bbody" id="boardBody">
+  <b>【駅前】</b>
+  <p>・本日、駅前のクラーク１名欠勤です。</p>
+  <p>・３月９日から１０日まで、○○先生が学会参加のため休診です。</p>
+  <b>【全体】</b>
+  <p>・年度末調整の書類は１２月１０日までに事務室の封筒に入れてください。</p>
+  </div>
+  <span class="more">続きを見る ›</span>
+</a>
+
+<div class="row2">
+  <a class="card qcard" href="quiz.html">
+    <h2 id="qName">○○さんへの質問</h2>
+    <p id="qText">Q：電話で検査費用を聞かれたら、今もこの金額で案内していますか？（コロナ1,600円、インフル1,000円程度）</p>
+    <span class="pts" id="ptsBadge">0P</span>
+  </a>
+  <a class="card weather" id="wlink" href="#" target="_blank" rel="noopener">
+    <div class="wbox" id="wbox"><div class="wrow">読み込み中…</div></div>
+    <div class="wplace" id="wplace"></div>
+  </a>
+</div>
+
+<div class="grid">
+  <a class="card tile" id="tBoard" href="page.html?p=board"><span class="em">📋</span><span class="lb">掲示板</span></a>
+  <a class="card tile" id="tManual" href="page.html?p=manual"><span class="em">📖</span><span class="lb">業務マニュアル</span></a>
+  <a class="card tile" id="tShift" href="page.html?p=shift"><img class="em-img" src="icon-shift.png" alt="📅"><span class="lb">シフト管理</span></a>
+  <a class="card tile" href="page.html?p=kokoro"><span class="em">💗</span><span class="lb">こころがけ</span></a>
+  <a class="card tile" href="page.html?p=knowledge"><span class="em">🎓</span><span class="lb">仕事に必要な<br>知識</span></a>
+  <a class="card tile" href="messages.html"><span class="badge" id="msgBadge" hidden></span><span class="em">✉️</span><span class="lb">メッセージ</span></a>
+  <a class="card tile" href="page.html?p=line"><span class="line-ic">LINE</span><span class="lb">LINE</span></a>
+  <a class="card tile" href="apply.html"><span class="em">📝</span><span class="lb">申請</span></a>
+  <a class="card tile qa" href="qa.html"><span class="em">🎤</span><span class="lb">Q&amp;A</span></a>
+</div>
+
+</div>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=1"></script><script src="links.js?v=1"></script>
+<script>
+// ── 試験用：見本のデータ／本物のデータ（Box の控え）の切り替え ──
+(()=>{
+  const tag=document.getElementById('mockTag'),pan=document.getElementById('rmPanel'),sel=document.getElementById('rmMe');
+  if(!RM.has){tag.title='本番のアプリとはつながっていません（天気だけ実際の予報）';tag.onclick=()=>alert('本物のデータのファイル（real-data.js）がありません');return}
+  if(RM.on){tag.textContent='本物（控え）';tag.style.background='#E8F5E9';tag.style.borderColor='#2F7D5B';tag.style.color='#1F5F3F'}
+  sel.innerHTML=RM.people.map(p=>`<option value="${p.code}" ${RM.me&&p.code===RM.me.code?'selected':''}>${p.unit}　${p.name}${p.hasBase?'':'（HUKU BASE なし）'}</option>`).join('');
+  document.querySelector(`input[name=rmsrc][value="${RM.on?1:0}"]`).checked=true;
+  tag.onclick=()=>{pan.hidden=!pan.hidden};
+  document.getElementById('rmApply').onclick=()=>{RM.set('portal_mock_real',document.querySelector('input[name=rmsrc]:checked').value);RM.set('portal_mock_me',sel.value);location.reload()};
+  if(!RM.on||!RM.me) return;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // 本日の掲示板：自分の院と本部（全体）の新しいもの
+  const grp=[['駅前','駅前'],['本部','全体']].map(([b,l])=>{const xs=RM.myBoard.filter(x=>x.badge===b).slice(0,2);
+     return xs.length?`<b>【${l}】</b>`+xs.map(x=>`<p>・${esc(x.title)}<span style="color:var(--sub)">（${rmDate(x.at)}）</span>${RM.isRead(x.id)?'':' <b style="color:var(--red)">●</b>'}</p>`).join(''):''}).join('');
+  document.getElementById('boardBody').innerHTML=grp||'<p>新しい掲示はありません</p>';
+  // ○○さんへの質問：自分の職種の質問（優先度の高い順の先頭）
+  const q=(REAL.quiz[RM.me.job]||[])[0];
+  document.getElementById('qText').textContent=q?'Q：'+q.q.split(/\s*①/)[0]:'いまは質問がありません';
+})();
+// ○○さんへの質問：ログインした人の名前（見本では「だれとして見るか」で選んだ人）と、ポイント
+(()=>{const n=(typeof RM!=='undefined'&&RM.me)?(RM.me.family||RM.me.name.split(/[\s　]/)[0]):'山田';
+  document.getElementById('qName').textContent=n+'さんへの質問';
+  const b=document.getElementById('ptsBadge');const show=()=>PTS.paint(b);show();window.addEventListener('pageshow',show)})();
+// 掲示板・業務マニュアル・シフト管理は、本番のアプリのその画面へ直接飛ぶ
+document.getElementById('tBoard').href=LINKS.board();
+document.getElementById('tManual').href=LINKS.manual();
+document.getElementById('tShift').href=LINKS.shift();
+// メッセージの未読数（2つの受信箱の合計）
+function showUnread(){const n=unreadCount(),b=document.getElementById('msgBadge');b.textContent=n;b.hidden=!n}
+showUnread(); window.addEventListener('pageshow',showUnread);
+// 院ごとの場所（見本では URL の ?in=kamigyo で上京区に切り替え）
+const PLACES={
+  shimogyo:{name:'駅前（京都市下京区）',lat:34.9875,lon:135.7593,wn:'https://weathernews.jp/onebox/tenki/kyoto/26106/'},
+  kamigyo:{name:'いぐち・みずたに（京都市上京区）',lat:35.0294,lon:135.7556,wn:'https://weathernews.jp/onebox/tenki/kyoto/26102/'}
+};
+const P=PLACES[new URLSearchParams(location.search).get('in')]||PLACES.shimogyo;
+document.getElementById('wplace').textContent=P.name.replace(/（.*）/,'');
+document.getElementById('wlink').href=P.wn;
+const ICON=(c,day)=>c<=1&&!day?'🌙':c===2&&!day?'☁️':c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':c<=86?'🌨️':'⛈️';
+fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lon}&hourly=weather_code,temperature_2m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=2`)
+.then(r=>r.json()).then(d=>{
+  const now=new Date(); const h=d.hourly; const rows=[];
+  for(let i=0;i<h.time.length&&rows.length<3;i++){
+    const t=new Date(h.time[i]); if(t<now) continue;
+    if(t.getHours()%3) continue;
+    rows.push(`<div class="wrow"><span>${t.getHours()}:00</span><span class="ic">${ICON(h.weather_code[i],h.is_day[i])}</span></div>`);
+  }
+  document.getElementById('wbox').innerHTML=rows.join('')+
+   `<div class="temps"><span class="hi">${Math.round(d.daily.temperature_2m_max[0])}℃</span><span class="lo">${Math.round(d.daily.temperature_2m_min[0])}℃</span></div>`;
+}).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
+</script>
+</body></html>

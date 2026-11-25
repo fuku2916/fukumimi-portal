@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>メッセージ（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+.top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid #dde1e5}
+.back{font-size:17px;font-weight:700;background:var(--bg);border:0;border-radius:12px;padding:10px 14px;color:var(--ink);text-decoration:none;cursor:pointer}
+.top h1{font-size:22px;margin:0}
+.tabs{display:flex;gap:6px;margin:12px 0}
+.tabs button{flex:1;font:inherit;font-size:15px;font-weight:700;border:0;border-radius:12px;padding:10px 4px;background:var(--tile);color:var(--ink);cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.tabs .n{display:inline-block;min-width:20px;margin-left:4px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:13px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:block;width:100%;text-align:left;font:inherit;color:inherit;border:0;background:#fff;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.07);position:relative}
+.item.unread{box-shadow:inset 5px 0 0 var(--red),0 1px 2px rgba(0,0,0,.07)}
+.bdg{display:inline-block;color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:2px 8px;margin-right:6px;vertical-align:2px}
+.ttl{font-size:17px;font-weight:700;line-height:1.5}
+.item.read .ttl{font-weight:500;color:#3a4048}
+.meta{font-size:13px;color:var(--sub);margin-top:4px;display:flex;justify-content:space-between}
+.dot{color:var(--red);font-weight:700}
+.detail{background:#fff;border-radius:18px;padding:16px;margin-top:12px}
+.detail .ttl{font-size:20px;margin:8px 0}
+.detail .body{font-size:17px;line-height:1.7;white-space:pre-wrap}
+.detail .from{font-size:13px;color:var(--sub);margin-top:4px}
+.act{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.act button,.act a{font:inherit;font-size:17px;font-weight:700;border:0;border-radius:14px;padding:14px;text-align:center;cursor:pointer;text-decoration:none}
+.go{background:var(--accent);color:#fff}
+.reply textarea{width:100%;font:inherit;font-size:17px;border:1px solid #c9ced4;border-radius:12px;padding:10px;min-height:90px;margin-top:4px}
+.send{background:var(--ink);color:#fff}
+.note{font-size:13px;color:var(--sub);margin-top:6px}
+.empty{text-align:center;color:var(--sub);padding:30px 0}
+</style>
+</head><body>
+<div class="top"><a class="back" id="back" href="index.html">← もどる</a><h1 id="h1">メッセージ</h1></div>
+<div class="wrap">
+  <div class="mockbar">見本です。本番では、シフト管理アプリと HUKU BASE の2つの受信箱から読みます。既読の印はこの端末の中だけに付きます。</div>
+  <div id="listView">
+    <div class="tabs" id="tabs"></div>
+    <div class="list" id="list"></div>
+  </div>
+  <div id="detailView" hidden></div>
+</div>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="links.js?v=1"></script>
+<script>
+const TABS=[['all','すべて'],['shift','🗓 シフト'],['base','HUKU BASE']];
+let tab='all';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const when=iso=>{const d=new Date(iso),t=new Date();const same=d.toDateString()===t.toDateString();
+  return same?`今日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`:`${d.getMonth()+1}/${d.getDate()}`};
+const badge=m=>{const[b,c]=BADGE[m.src][m.cat]||['お知らせ','#5b6470'];return `<span class="bdg" style="background:${c}">${b}</span>`};
+
+function renderList(){
+  const rows=INBOX_DEMO.slice().sort((a,b)=>b.at.localeCompare(a.at));
+  $('tabs').innerHTML=TABS.map(([k,l])=>{
+    const n=rows.filter(m=>(k==='all'||m.src===k)&&!isRead(m)).length;
+    return `<button aria-pressed="${tab===k}" data-k="${k}">${l}${n?`<span class="n">${n}</span>`:''}</button>`}).join('');
+  const shown=rows.filter(m=>tab==='all'||m.src===tab);
+  $('list').innerHTML=shown.length?shown.map(m=>{const r=isRead(m);return `
+    <button class="item ${r?'read':'unread'}" data-id="${m.id}">
+      <div class="ttl">${badge(m)}${esc(m.title)}</div>
+      <div class="meta"><span>${SRC_LABEL[m.src]}・${when(m.at)}</span>${r?'':'<span class="dot">● 未読</span>'}</div>
+    </button>`}).join(''):'<div class="empty">メッセージはありません</div>';
+}
+function openMsg(id){
+  const m=INBOX_DEMO.find(x=>x.id===id); if(!m) return;
+  markRead(id);
+  $('listView').hidden=true; $('detailView').hidden=false; $('h1').textContent='メッセージ';
+  $('back').removeAttribute('href'); window.scrollTo(0,0);
+  $('detailView').innerHTML=`<div class="detail">
+    ${badge(m)}<div class="ttl">${esc(m.title)}</div>
+    <div class="from">${SRC_LABEL[m.src]}・${when(m.at)}</div>
+    <hr style="border:0;border-top:1px solid #e5e7ea;margin:12px 0">
+    <div class="body">${esc(m.body)}</div>
+    <div class="act">
+      ${m.link?`<a class="go" href="${LINKS.baseMsg()}">📖 HUKU BASE で開く</a>`:''}
+      ${m.src==='shift'&&!m.link?`<a class="go" href="${LINKS.shift()}">🗓 シフト管理を開く</a>`:''}
+      ${m.canReply?`<div class="reply"><b>返信する</b><textarea id="rep" placeholder="ここに返信を入力（🎤 キーボードのマイクでも話せます）"></textarea>
+        <button class="send" onclick="sendReply()">返信を送る</button>
+        <div class="note">返信は、シフト管理アプリの管理者画面に届きます（見本では送りません）。</div></div>`:''}
+    </div></div>`;
+}
+function sendReply(){const t=$('rep').value.trim(); if(!t){alert('返信を入力してください');return}
+  alert('（見本）送ったことにしました：\n'+t); history.back();}
+function showList(){ $('detailView').hidden=true; $('listView').hidden=false; $('back').href='index.html'; renderList(); }
+
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b){tab=b.dataset.k;renderList()}});
+$('list').addEventListener('click',e=>{const b=e.target.closest('.item');if(b){history.pushState({id:b.dataset.id},'','#'+b.dataset.id);openMsg(b.dataset.id)}});
+$('back').addEventListener('click',e=>{if(!$('detailView').hidden){e.preventDefault();history.back()}});
+window.addEventListener('popstate',()=>{const id=location.hash.slice(1);id?openMsg(id):showList()});
+location.hash?openMsg(location.hash.slice(1)):renderList();
+</script>
+<script>if(RM.on&&RM.me){const m=document.querySelector('.mockbar');m.style.cssText='background:#E8F5E9;border-color:#2F7D5B;color:#1F5F3F';m.textContent='本物のデータ：'+RM.label+'。'+RM.me.name+'さんあてのメッセージです（HUKU BASE のメッセージはまだ'+REAL.baseMessages+'件）。既読の印はこの端末の中だけに付きます。'}</script>
+</body></html>

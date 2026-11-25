@@ -1,0 +1,109 @@
+:root{
+  --bg:#e6f4e8; --dot:#c4e2c9; --tile:#ffffff; --tile-press:#eef6ef;
+  --ink:#1f2328; --sub:#5b6470; --accent:#3aa7e8; --red:#e5484d;
+  --line:#06c755;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{
+  background:var(--bg) radial-gradient(var(--dot) 1px,transparent 1.2px) 0 0/16px 16px;
+  color:var(--ink);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  min-height:100vh;
+}
+.wrap{max-width:440px;margin:0 auto;padding:12px 12px 28px}
+.mockbar{font-size:12px;color:#8a5a00;background:#fff4d6;border:1px solid #f0d58a;border-radius:10px;padding:6px 10px;margin-bottom:10px}
+.card{background:var(--tile);border-radius:22px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+a.card,button.card{display:block;color:inherit;text-decoration:none;border:0;font:inherit;text-align:left;width:100%;cursor:pointer}
+a.card:active,button.card:active{background:var(--tile-press)}
+h2{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:.02em}
+.board p{margin:2px 0;font-size:14px;line-height:1.5}
+.board b{font-size:14px}
+.row2{display:grid;grid-template-columns:1fr 112px;gap:10px;margin-top:10px}
+.qcard{position:relative;padding-bottom:52px}
+.qcard h2{font-size:22px}
+.qcard p{margin:0;font-size:14px;line-height:1.5;font-weight:600}
+.pts{position:absolute;right:12px;bottom:10px;background:var(--accent);color:#fff;font-weight:700;border-radius:999px;padding:8px 18px;font-size:16px}
+.weather{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px}
+.wbox{background:#fff;border-radius:12px;padding:8px 6px;width:100%}
+.wrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:2px 2px}
+.wrow .ic{font-size:20px}
+.temps{display:flex;gap:4px;margin-top:6px}
+.temps span{flex:1;text-align:center;color:#fff;font-weight:700;font-size:13px;border-radius:6px;padding:2px 0}
+.hi{background:#e5484d}.lo{background:#3b82f6}
+.wplace{font-size:11px;color:var(--sub)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.tile{position:relative;aspect-ratio:1/1.05;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px!important;text-align:center!important}
+.tile .em{font-size:58px;line-height:1}
+.tile .lb{font-size:14px;font-weight:700}
+.badge{position:absolute;top:6px;right:8px;background:var(--red);color:#fff;font-weight:700;font-size:14px;min-width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.badge[hidden]{display:none}
+.line-ic{width:64px;height:64px;border-radius:16px;background:var(--line);color:#fff;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center}
+.qa{background:#fff4e0}
+.qa .lb{font-size:16px}
+/* ── 各ボタンの先の画面（共通） ── */
+.top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid #dde1e5}
+.back{font-size:17px;font-weight:700;background:var(--bg);border:0;border-radius:12px;padding:10px 14px;color:var(--ink);text-decoration:none;cursor:pointer}
+.top h1{font-size:22px;margin:0}
+.sec{font-size:18px;margin:18px 0 8px}
+.big-btn{display:block;width:100%;text-align:center;font:inherit;font-size:19px;font-weight:800;border:0;border-radius:16px;padding:16px;background:var(--ink);color:#fff;text-decoration:none;cursor:pointer;margin-top:12px}
+.row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:8px;color:inherit;text-decoration:none}
+.row .ic{font-size:30px}
+.row .tt{font-size:17px;font-weight:700;line-height:1.45}
+.row small{display:block;color:var(--sub);font-size:13px;font-weight:400;margin-top:2px}
+.row.unread{box-shadow:inset 5px 0 0 var(--red)}
+.chip{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:7px;padding:1px 7px;margin-right:6px;vertical-align:2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat{background:#fff;border-radius:18px;padding:14px 10px;text-align:center;color:inherit;text-decoration:none;font-weight:700;font-size:16px;line-height:1.35}
+.cat .ic{display:block;font-size:36px;margin-bottom:4px}
+.cat small{display:block;color:var(--sub);font-weight:400;font-size:12px;margin-top:2px}
+.paper{background:#fff;border-radius:20px;padding:18px}
+.paper h2{font-size:22px;margin:4px 0 10px}
+.paper p{font-size:17px;line-height:1.8;margin:0 0 10px}
+.lesson{background:#FDF2F8;border-left:6px solid #D946A8;border-radius:12px;padding:12px 14px;font-size:17px;font-weight:700;line-height:1.7}
+/* ── トップ画面：スクロールせずに1画面に収める（画面の高さに合わせて伸び縮み） ── */
+.home .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:clamp(6px,1.2dvh,10px);
+  padding:max(8px,env(safe-area-inset-top)) 10px max(8px,env(safe-area-inset-bottom));overflow:hidden}
+.home .mock-tag{position:fixed;top:4px;right:6px;z-index:5;margin:0;padding:1px 8px;font-size:11px;border-radius:8px;opacity:.85}
+.home .board{position:relative;flex:0 1 auto;min-height:0;max-height:26dvh;overflow:hidden;padding:clamp(8px,1.4dvh,14px) 14px}
+.home .board h2{font-size:clamp(18px,3dvh,26px);margin:0 0 2px}
+.home .board .bbody{font-size:clamp(12px,1.75dvh,14px)}
+.home .board p,.home .board b{font-size:inherit;margin:0;line-height:1.45}
+.home .board .more{position:absolute;right:0;bottom:0;left:0;padding:14px 14px 6px;text-align:right;font-size:13px;font-weight:700;color:#185FA5;
+  background:linear-gradient(rgba(255,255,255,0),#fff 55%)}
+.home .row2{flex:0 0 auto;margin:0;height:clamp(118px,19dvh,170px)}
+.home .row2>.card{height:100%;overflow:hidden}
+.home .qcard{padding:clamp(8px,1.4dvh,14px) 14px 44px}
+.home .qcard h2{font-size:clamp(16px,2.6dvh,22px);margin:0 0 4px}
+.home .qcard p{font-size:clamp(12px,1.75dvh,14px);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.home .pts{padding:5px 14px;font-size:15px;bottom:8px}
+.home .weather{padding:6px}
+.home .wbox{padding:4px 6px}
+.home .wrow{font-size:12px;padding:1px 2px}.home .wrow .ic{font-size:clamp(14px,2.4dvh,20px)}
+.home .temps{margin-top:3px}
+.home .grid{flex:1 1 0;min-height:0;margin:0;grid-template-rows:repeat(3,1fr);gap:clamp(6px,1.2dvh,10px)}
+.home .tile{aspect-ratio:auto;min-height:0;gap:clamp(2px,0.6dvh,6px)}
+.home .tile .em{font-size:clamp(30px,6.5dvh,58px)}
+.home .tile .lb{font-size:clamp(12px,1.8dvh,15px)}
+.home .line-ic{width:clamp(36px,6.5dvh,64px);height:clamp(36px,6.5dvh,64px);font-size:clamp(11px,1.8dvh,18px);border-radius:clamp(10px,1.6dvh,16px)}
+.home .qcard{padding-bottom:clamp(8px,1.4dvh,14px)}
+.home .qcard h2{margin-right:58px}
+.home .pts{top:8px;right:8px;bottom:auto;padding:3px 10px;font-size:14px}
+.home .qcard p{-webkit-line-clamp:5}
+.home .qcard h2{font-size:clamp(15px,min(2.6dvh,5.4vw),22px);white-space:nowrap}
+.home .board h2{font-size:clamp(18px,min(3dvh,6.6vw),26px)}
+.home .qcard h2{font-size:clamp(14px,min(2.6dvh,4.5vw),22px);margin-right:50px}
+.home .pts{padding:2px 8px;font-size:13px}
+.home .tile{padding:6px 3px!important}
+.home .tile .lb{font-size:clamp(11px,min(1.8dvh,3.6vw),15px);white-space:nowrap}
+.home .tile:nth-child(5) .lb{white-space:normal}
+.tile .em-img{width:72px;height:72px;object-fit:contain}
+.home .tile .em-img{width:clamp(40px,8.5dvh,76px);height:clamp(40px,8.5dvh,76px)}
+.home .tile .em-img{width:clamp(36px,7dvh,64px);height:clamp(36px,7dvh,64px)}
+button.mock-tag{font:inherit;font-size:11px;cursor:pointer;border:1px solid #f0d58a}
+.rm-panel{position:fixed;top:30px;right:8px;left:8px;max-width:420px;margin:0 auto;z-index:6;background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:15px}
+.rm-panel label{display:block;margin-top:6px}
+.rm-panel select{width:100%;font:inherit;font-size:15px;padding:8px;border-radius:10px;margin-top:4px}
+.rm-panel .note{font-size:12px;color:var(--sub);margin:8px 0 0}
+.home .qcard h2{overflow:hidden;text-overflow:ellipsis}
+.pts{text-shadow:0 1px 1px rgba(0,0,0,.25)}

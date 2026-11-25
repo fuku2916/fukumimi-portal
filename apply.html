@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>申請（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+.top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-bottom:1px solid #dde1e5}
+.back{font-size:17px;font-weight:700;background:var(--bg);border:0;border-radius:12px;padding:10px 14px;color:var(--ink);text-decoration:none;cursor:pointer}
+.top h1{font-size:22px;margin:0}
+.pl{display:flex;justify-content:space-between;align-items:center;background:#FDF2F8;border:1px solid #D946A8;color:#86198F;border-radius:16px;padding:10px 16px;font-weight:700;margin-bottom:12px}
+.pl b{font-size:26px}
+.kinds{display:flex;flex-direction:column;gap:10px}
+.kind{display:flex;align-items:center;gap:14px;width:100%;font:inherit;text-align:left;border-radius:20px;padding:14px 16px;cursor:pointer;border:2px solid var(--bd);background:var(--bg2);color:var(--fg)}
+.kind .ic{font-size:40px;line-height:1}
+.kind .t{font-size:20px;font-weight:800}
+.kind .s{font-size:13px;opacity:.85;margin-top:2px}
+.kind:active{filter:brightness(.95)}
+h2{font-size:18px;margin:22px 0 8px}
+.hist{display:flex;flex-direction:column;gap:6px}
+.h{background:#fff;border-radius:14px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.h small{display:block;color:var(--sub);font-size:12px}
+.st{font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.wait{background:#FFF7ED;color:#C2410C}.okk{background:#ECFDF5;color:#065F46}.ng{background:#FEF2F2;color:#B91C1C}
+.form{background:#fff;border-radius:20px;padding:16px}
+.form .head{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;margin-bottom:12px}
+.lbl{font-size:16px;font-weight:700;margin:14px 0 6px}
+.form input[type=date],.form input[type=time],.form textarea{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c9ced4;border-radius:12px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;align-items:center;gap:10px;font-size:18px;padding:12px 14px;border:2px solid #dde1e5;border-radius:14px;cursor:pointer}
+.opt input{width:22px;height:22px}
+.opt:has(input:checked){border-color:var(--bd);background:var(--bg2)}
+.photo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed #c9ced4;border-radius:16px;padding:20px;font-size:17px;font-weight:700;cursor:pointer;text-align:center}
+.photo img{max-width:100%;max-height:220px;border-radius:10px}
+.submit{width:100%;margin-top:18px;font:inherit;font-size:20px;font-weight:800;border:0;border-radius:16px;padding:16px;background:var(--fg);color:#fff;cursor:pointer}
+.note{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.6}
+.done{text-align:center;padding:30px 10px}
+.done .big{font-size:60px}
+.done p{font-size:18px;line-height:1.7}
+</style>
+</head><body>
+<div class="top"><a class="back" id="back" href="index.html">← もどる</a><h1>申請</h1></div>
+<div class="wrap">
+  <div class="mockbar">見本です。送っても本番には届きません。本番ではシフト管理アプリ（有給・希望休・出勤希望・遅延証明書）とタイムカード（打刻の修正）に届きます。</div>
+  <div id="home">
+    <div class="pl"><span>🌸 有給休暇の残り</span><span><b>8.5</b> 日</span></div>
+    <div class="kinds" id="kinds"></div>
+    <h2>これまでの申請</h2>
+    <div class="hist" id="hist"></div>
+  </div>
+  <div id="formView" hidden></div>
+</div>
+<script src="links.js?v=1"></script>
+<script>
+// 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
+const KINDS=[
+ {k:'paid', ic:'🌸',t:'有給休暇',     s:'全日・午前半日・午後半日',          fg:'#86198F',bg:'#FDF2F8',bd:'#D946A8',to:'シフト管理アプリ'},
+ {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ'},
+ {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ'},
+ {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）'},
+ {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'タイムカード（管理者が承認）'},
+];
+let HIST=[
+ {k:'paid', d:'2026-12-26',x:'全日',st:'wait'},
+ {k:'train',d:'2026-11-21',x:'証明書を送信済み',st:'okk'},
+ {k:'off',  d:'2026-12-13',x:'',st:'okk'},
+ {k:'punch',d:'2026-11-10',x:'退勤 18:45 → 19:10',st:'ng'},
+];
+const ST={wait:['確認待ち','wait'],okk:['承認されました','okk'],ng:['差し戻し','ng']};
+const $=id=>document.getElementById(id);
+const K=k=>KINDS.find(x=>x.k===k);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const md=ymd=>{const d=new Date(ymd+'T00:00');return `${d.getMonth()+1}/${d.getDate()}（${'日月火水木金土'[d.getDay()]}）`};
+const today=new Date(); const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+function home(){
+  $('kinds').innerHTML=KINDS.map(o=>`<button class="kind" data-k="${o.k}" style="--fg:${o.fg};--bg2:${o.bg};--bd:${o.bd}">
+     <span class="ic">${o.ic}</span><span><div class="t">${o.t}</div><div class="s">${o.s}</div></span></button>`).join('');
+  $('hist').innerHTML=HIST.map(h=>{const o=K(h.k);return `<div class="h"><span>${o.ic} ${o.t}　${md(h.d)}<small>${esc(h.x)}</small></span><span class="st ${ST[h.st][1]}">${ST[h.st][0]}</span></div>`}).join('');
+}
+function form(k){
+  const o=K(k); $('home').hidden=true; $('formView').hidden=false; window.scrollTo(0,0);
+  const v=$('formView'); v.style.cssText=`--fg:${o.fg};--bg2:${o.bg};--bd:${o.bd}`;
+  let body='';
+  if(k==='paid') body=`<div class="lbl">① 休む日</div><input type="date" id="d" value="${ymd(new Date(today.getTime()+7*864e5))}">
+    <div class="lbl">② 休み方</div><div class="opts">
+     <label class="opt"><input type="radio" name="x" value="全日" checked>全日（1日）</label>
+     <label class="opt"><input type="radio" name="x" value="午前半日">午前半日（0.5日）</label>
+     <label class="opt"><input type="radio" name="x" value="午後半日">午後半日（0.5日）</label></div>`;
+  if(k==='off'||k==='work') body=`<div class="lbl">① 日にち</div><input type="date" id="d" value="${ymd(new Date(today.getTime()+14*864e5))}">
+    <div class="lbl">② ひとこと（なくてもよい）</div><textarea id="memo" rows="2" placeholder="${k==='off'?'例：家族の用事':'例：午後だけなら出られます'}"></textarea>`;
+  if(k==='train') body=`<div class="lbl">① 電車が遅れた日</div><input type="date" id="d" value="${ymd(today)}">
+    <div class="lbl">② 遅延証明書</div>
+    <label class="photo" id="ph"><span style="font-size:42px">📷</span>写真をとる・えらぶ<small style="font-weight:400">駅でもらった紙、または鉄道会社のサイトの画面</small>
+     <input type="file" accept="image/*,application/pdf" capture="environment" hidden id="file"></label>
+    <div class="note">送っただけでは遅刻は消えません。事務が証明書を確かめると「電車の遅延」になります。</div>`;
+  if(k==='punch') body=`<div class="lbl">① 日にち</div><input type="date" id="d" value="${ymd(new Date(today.getTime()-864e5))}">
+    <div class="lbl">② どの打刻</div><div class="opts">
+     <label class="opt"><input type="radio" name="x" value="出勤" checked>出勤</label>
+     <label class="opt"><input type="radio" name="x" value="退勤">退勤</label></div>
+    <div class="lbl">③ 正しい時刻</div><input type="time" id="tm" value="18:45">
+    <div class="lbl">④ 理由</div><textarea id="memo" rows="2" placeholder="例：退勤を押し忘れました"></textarea>`;
+  v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>${body}
+    <button class="submit" id="send">申請する（見本）</button>
+    <a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>
+    <div class="note">届け先：${o.to}</div></div>`;
+  const f=$('file'); if(f) f.onchange=()=>{const x=f.files[0]; if(!x)return;
+    $('ph').innerHTML=(x.type.startsWith('image/')?`<img src="${URL.createObjectURL(x)}">`:'📄 '+esc(x.name))+'<small style="font-weight:400">押すと撮り直せます</small>'; $('ph').appendChild(f);};
+  $('send').onclick=()=>{
+    const d=$('d').value; if(!d){alert('日にちを選んでください');return}
+    if(k==='train'&&!(f&&f.files[0])){alert('遅延証明書の写真を選んでください');return}
+    if(k==='punch'&&!$('memo').value.trim()){alert('理由を書いてください');return}
+    const x=(document.querySelector('input[name=x]:checked')||{}).value||'';
+    const extra=k==='punch'?`${x} ${$('tm').value}`:k==='train'?'証明書を送信済み':(x||($('memo')&&$('memo').value)||'');
+    HIST.unshift({k,d,x:extra,st:'wait'});
+    v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(extra)}</p>
+      <p class="note">（見本なので、実際には送っていません）<br>結果はメッセージに届きます。</p>
+      <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
+  };
+}
+function showHome(){ $('formView').hidden=true; $('home').hidden=false; home(); }
+$('kinds').addEventListener('click',e=>{const b=e.target.closest('.kind'); if(b){history.pushState({},'','#'+b.dataset.k); form(b.dataset.k)}});
+$('back').addEventListener('click',e=>{if(!$('formView').hidden){e.preventDefault();history.back()}});
+window.addEventListener('popstate',()=>{const k=location.hash.slice(1); K(k)?form(k):showHome()});
+K(location.hash.slice(1))?form(location.hash.slice(1)):home();
+</script>
+</body></html>
