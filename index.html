@@ -130,7 +130,7 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
     const isAll=b=>/全体|本部/.test(b.name);
     const list=[...boards].sort((a,b)=>isAll(a)-isAll(b)||a.sort_order-b.sort_order);
     const mine=list.find(b=>!isAll(b))||list[0];
-    const per=await Promise.all(list.map(b=>HB.posts(b.id,2)));
+    const per=await Promise.all(list.map(b=>HB.posts(b.id,list.length>2?1:2))); // 掲示板が3つ以上見える人（管理者）は1件ずつ
     const md=s=>{const d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()};
     body.innerHTML=list.map((b,i)=>per[i].length?`<b>【${esc(b.name.replace(/クリニック$/,''))}】</b>`+per[i].map(p=>
       `<p>・${esc(p.title)}<span style="color:var(--sub)">（${md(p.created_at)}）</span>${p.is_read?'':' <b style="color:var(--red)">●</b>'}</p>`).join(''):'').join('')||'<p>新しい掲示はありません</p>';
