@@ -38,7 +38,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
     <p id="qText">Q：電話で検査費用を聞かれたら、今もこの金額で案内していますか？（コロナ1,600円、インフル1,000円程度）</p>
     <span class="pts" id="ptsBadge">0P</span>
   </a>
-  <a class="card weather" id="wlink" href="#" target="_blank" rel="noopener">
+  <a class="card weather" id="wlink" href="weather.html">
     <div class="wbox" id="wbox"><div class="wrow">読み込み中…</div></div>
     <div class="wplace" id="wplace"></div>
   </a>
@@ -96,7 +96,7 @@ const PLACES={
 };
 const P=PLACES[new URLSearchParams(location.search).get('in')]||PLACES.shimogyo;
 document.getElementById('wplace').textContent=P.name.replace(/（.*）/,'');
-document.getElementById('wlink').href=P.wn;
+document.getElementById('wlink').href='weather.html'+(location.search.includes('in=kamigyo')?'?in=kamigyo':'');
 const ICON=(c,day)=>c<=1&&!day?'🌙':c===2&&!day?'☁️':c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':c<=86?'🌨️':'⛈️';
 fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lon}&hourly=weather_code,temperature_2m,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=2`)
 .then(r=>r.json()).then(d=>{

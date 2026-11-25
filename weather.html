@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>天気（見本）</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;font:inherit;font-size:15px;font-weight:700;border:2px solid #fff;background:#fff;border-radius:14px;padding:10px 6px;cursor:pointer;color:var(--sub)}
+.tabs button.on{border-color:var(--accent);color:var(--ink);background:#eaf6fe}
+.box{background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:12px}
+.box h3{margin:0 0 8px;font-size:15px;color:var(--sub)}
+.now{display:flex;align-items:center;gap:14px}
+.now .big{font-size:64px;line-height:1}
+.now .t{font-size:44px;font-weight:800}
+.now .d{font-size:18px;font-weight:700}
+.now .s{font-size:14px;color:var(--sub);line-height:1.6}
+.umb{margin-top:10px;border-radius:12px;padding:8px 12px;font-size:16px;font-weight:700}
+.umb.yes{background:#e8f1fd;color:#1d4f91}.umb.no{background:#ECFDF5;color:#065F46}
+.hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.hr{flex:none;width:56px;text-align:center;border-radius:12px;padding:6px 0;background:#f5f8f6}
+.hr .h{font-size:13px;color:var(--sub)}.hr .i{font-size:24px;margin:2px 0}.hr .c{font-size:15px;font-weight:700}
+.hr .p{font-size:12px;color:#1f6fb2}
+.hr.day{background:#fff6dc}
+.dl{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px solid #eef0f2;font-size:15px}
+.dl:first-of-type{border-top:0}
+.dl .w{width:86px;font-weight:700;white-space:nowrap}.dl .w.sun{color:#e5484d}.dl .w.sat{color:#1f6fb2}
+.dl .i{font-size:24px;width:32px;text-align:center}
+.dl .x{flex:1;color:var(--sub);font-size:13px}
+.dl .p{width:54px;white-space:nowrap;text-align:right;color:#1f6fb2;font-size:13px}
+.dl .hi{color:#e5484d;font-weight:800;width:38px;text-align:right;background:none}
+.dl .lo{color:#3b82f6;font-weight:800;width:38px;text-align:right;background:none}
+.src{font-size:12px;color:var(--sub);text-align:center;margin:4px 0 16px}
+</style>
+</head><body>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1>天気</h1></div>
+<div class="wrap">
+  <div class="tabs" id="tabs"></div>
+  <div class="box"><h3 id="nowTitle">いまの天気</h3><div id="now">読み込み中…</div></div>
+  <div class="box"><h3>1時間ごと（横にずらせます）</h3><div class="hours" id="hours"></div></div>
+  <div class="box"><h3>1週間</h3><div id="week"></div></div>
+  <div class="src">天気のデータ：Open-Meteo（気象庁などの予報をもとにしたもの）</div>
+</div>
+<script>
+const PLACES={
+  shimogyo:{name:'駅前',sub:'京都市下京区',lat:34.9875,lon:135.7593},
+  kamigyo:{name:'いぐち・みずたに',sub:'京都市上京区',lat:35.0294,lon:135.7556}
+};
+let key=PLACES[new URLSearchParams(location.search).get('in')]?new URLSearchParams(location.search).get('in'):'shimogyo';
+const $=id=>document.getElementById(id);
+const ICON=(c,day=1)=>c<=1&&!day?'🌙':c===2&&!day?'☁️':c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':c<=86?'🌨️':'⛈️';
+const WORD=c=>c===0?'晴れ':c<=2?'晴れ時々くもり':c===3?'くもり':c<=48?'きり':c<=55?'霧雨':c<=57?'着氷性の霧雨':c<=63?'雨':c<=65?'強い雨':c<=67?'みぞれ':c<=75?'雪':c===77?'あられ':c<=81?'にわか雨':c===82?'激しいにわか雨':c<=86?'にわか雪':'雷雨';
+const WD=['日','月','火','水','木','金','土'];
+function tabs(){$('tabs').innerHTML=Object.entries(PLACES).map(([k,p])=>`<button class="${k===key?'on':''}" data-k="${k}">${p.name}<br><small style="font-weight:400">${p.sub}</small></button>`).join('')}
+$('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;key=b.dataset.k;history.replaceState(null,'','?in='+key);load()};
+function load(){
+  tabs(); const P=PLACES[key];
+  $('nowTitle').textContent=`いまの天気（${P.sub}）`; $('now').textContent='読み込み中…';
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lon}`+
+    `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m`+
+    `&hourly=weather_code,temperature_2m,precipitation_probability,is_day`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`+
+    `&wind_speed_unit=ms&timezone=Asia%2FTokyo&forecast_days=7`)
+  .then(r=>r.json()).then(d=>{
+    const c=d.current, D=d.daily, H=d.hourly;
+    const rainToday=D.precipitation_probability_max[0];
+    $('now').innerHTML=`<div class="now"><div class="big">${ICON(c.weather_code,c.is_day)}</div>
+      <div><div class="t">${Math.round(c.temperature_2m)}℃</div><div class="d">${WORD(c.weather_code)}</div></div>
+      <div class="s">体感 ${Math.round(c.apparent_temperature)}℃<br>湿度 ${c.relative_humidity_2m}%<br>風 ${Math.round(c.wind_speed_10m)}m/s</div></div>
+      <div class="umb ${rainToday>=50?'yes':'no'}">${rainToday>=50?'☂️ 今日は傘があると安心です':'今日は傘はいらなさそうです'}（雨の確率 最大${rainToday}%）</div>`;
+    const now=new Date(); now.setMinutes(0,0,0); let out=[];
+    for(let i=0;i<H.time.length&&out.length<24;i++){const t=new Date(H.time[i]);if(t<now)continue;
+      out.push(`<div class="hr ${H.is_day[i]?'day':''}"><div class="h">${t.getHours()===0?(t.getMonth()+1)+'/'+t.getDate():t.getHours()+'時'}</div><div class="i">${ICON(H.weather_code[i],H.is_day[i])}</div><div class="c">${Math.round(H.temperature_2m[i])}°</div><div class="p">☂${H.precipitation_probability[i]}%</div></div>`)}
+    $('hours').innerHTML=out.join(''); $('hours').scrollLeft=0;
+    $('week').innerHTML=D.time.map((s,i)=>{const t=new Date(s+'T00:00'),w=t.getDay();
+      return `<div class="dl"><span class="w ${w===0?'sun':w===6?'sat':''}">${i===0?'今日':i===1?'あす':(t.getMonth()+1)+'/'+t.getDate()}（${WD[w]}）</span><span class="i">${ICON(D.weather_code[i])}</span><span class="x">${WORD(D.weather_code[i])}</span><span class="p">☂${D.precipitation_probability_max[i]}%</span><span class="hi">${Math.round(D.temperature_2m_max[i])}°</span><span class="lo">${Math.round(D.temperature_2m_min[i])}°</span></div>`}).join('');
+  }).catch(()=>{$('now').textContent='天気を読めませんでした。電波のよいところで開き直してください。'});
+}
+load();
+</script>
+</body></html>
