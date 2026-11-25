@@ -9,6 +9,7 @@ const LINKS=(()=>{
   return {
     board:()=>BASE+'#/b/'+BOARD.ekimae,          // 駅前クリニックの掲示板（AIに聞く もここ）
     boardAll:()=>BASE+'#/b/'+BOARD.all,
+    boardOf:id=>BASE+'#/b/'+id,                  // ログインした人の院の掲示板
     post:id=>BASE+'#/p/'+id,
     manual:()=>BASE+'#/manual',
     baseMsg:()=>BASE+'#/msg',

@@ -50,14 +50,14 @@ html.lock body{position:fixed;inset:0;min-height:0}
   <a class="card tile" id="tShift" href="page.html?p=shift"><img class="em-img" src="icon-shift.png" alt="📅"><span class="lb">シフト管理</span></a>
   <a class="card tile" href="page.html?p=kokoro"><span class="em">💗</span><span class="lb">こころがけ</span></a>
   <a class="card tile" href="page.html?p=knowledge"><span class="em">🎓</span><span class="lb">仕事に必要な<br>知識</span></a>
-  <a class="card tile" href="messages.html"><span class="badge" id="msgBadge" hidden></span><span class="em">✉️</span><span class="lb">メッセージ</span></a>
+  <a class="card tile" id="tMsg" href="messages.html"><span class="badge" id="msgBadge" hidden></span><span class="em">✉️</span><span class="lb">メッセージ</span></a>
   <a class="card tile" href="page.html?p=line"><span class="line-ic">LINE</span><span class="lb">LINE</span></a>
   <a class="card tile" href="apply.html"><span class="em">📝</span><span class="lb">申請</span></a>
   <a class="card tile qa" href="qa.html"><span class="em">🎤</span><span class="lb">Q&amp;A</span></a>
 </div>
 
 </div>
-<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=1"></script><script src="links.js?v=1"></script>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=1"></script><script src="links.js?v=2"></script>
 <script>
 // ── 試験用：見本のデータ／本物のデータ（Box の控え）の切り替え ──
 (()=>{
@@ -87,7 +87,7 @@ document.getElementById('tBoard').href=LINKS.board();
 document.getElementById('tManual').href=LINKS.manual();
 document.getElementById('tShift').href=LINKS.shift();
 // メッセージの未読数（2つの受信箱の合計）
-function showUnread(){const n=unreadCount(),b=document.getElementById('msgBadge');b.textContent=n;b.hidden=!n}
+function showUnread(){const n=(window.REAL_UNREAD!=null?REAL_UNREAD:unreadCount()),b=document.getElementById('msgBadge');b.textContent=n;b.hidden=!n}
 showUnread(); window.addEventListener('pageshow',showUnread);
 // 院ごとの場所（見本では URL の ?in=kamigyo で上京区に切り替え）
 const PLACES={
@@ -109,6 +109,39 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
   document.getElementById('wbox').innerHTML=rows.join('')+
    `<div class="temps"><span class="hi">${Math.round(d.daily.temperature_2m_max[0])}℃</span><span class="lo">${Math.round(d.daily.temperature_2m_min[0])}℃</span></div>`;
 }).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="hb.js?v=1"></script>
+<script>
+// ── HUKU BASE にログインしていれば、本物の名前・掲示板・メッセージの未読数を出す（読むだけ） ──
+// ログインしていなければ、見本のまま（掲示板の欄に「ログインすると本物が出ます」と添える）
+(async()=>{
+  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const body=document.getElementById('boardBody');
+  if(!(await HB.ready)){
+    body.insertAdjacentHTML('afterbegin','<p style="color:var(--sub);font-size:13px;margin:0 0 4px">※見本です（HUKU BASE にログインすると本物が出ます）</p>');
+    return;
+  }
+  try{
+    const [me,boards,unread]=await Promise.all([HB.me(),HB.boards(),HB.unreadMessages()]);
+    // 名前（名字だけ）
+    if(me&&me.display_name) document.getElementById('qName').textContent=me.display_name.split(/[\s　]/)[0]+'さんへの質問';
+    // 掲示板：自分の院を先に、全体をあとに。それぞれ新しい2件
+    const isAll=b=>/全体|本部/.test(b.name);
+    const list=[...boards].sort((a,b)=>isAll(a)-isAll(b)||a.sort_order-b.sort_order);
+    const mine=list.find(b=>!isAll(b))||list[0];
+    const per=await Promise.all(list.map(b=>HB.posts(b.id,2)));
+    const md=s=>{const d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()};
+    body.innerHTML=list.map((b,i)=>per[i].length?`<b>【${esc(b.name.replace(/クリニック$/,''))}】</b>`+per[i].map(p=>
+      `<p>・${esc(p.title)}<span style="color:var(--sub)">（${md(p.created_at)}）</span>${p.is_read?'':' <b style="color:var(--red)">●</b>'}</p>`).join(''):'').join('')||'<p>新しい掲示はありません</p>';
+    dispatchEvent(new Event('resize')); // 行数が変わったので、画面に収まるかを測り直す
+    if(mine){const u=LINKS.boardOf(mine.id);document.querySelector('.card.board').href=u;document.getElementById('tBoard').href=u}
+    // メッセージ：HUKU BASE の未読数。押すと HUKU BASE のメッセージへ
+    window.REAL_UNREAD=unread; showUnread();
+    document.getElementById('tMsg').href=LINKS.baseMsg();
+    document.getElementById('mockTag').hidden=true;
+  }catch(e){body.insertAdjacentHTML('beforeend','<p style="color:var(--sub);font-size:13px">HUKU BASE を読めませんでした（'+esc(e.message)+'）</p>')}
+})();
 </script>
 <script>
 // 収まりきらなくなったとき（ボタンが増えた・とても小さい画面）だけ、スクロールできるようにもどす

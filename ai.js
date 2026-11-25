@@ -1,11 +1,8 @@
-// 本番の HUKU BASE の「AIに聞く」と同じ AI係に質問する。
-// HUKU BASE と同じ住所（fuku2916.github.io）にあるので、このスマホで HUKU BASE にログインしていれば、そのログインをそのまま使う。
+// 本番の HUKU BASE の「AIに聞く」と同じ AI係に質問する（つながりは hb.js）。
 // ここでできるのは「質問を送る・答えを読む・役に立ったかを付ける」だけ（HUKU BASE の画面でできることと同じ）。
 const AI=(()=>{
-  const db=supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3R3Ym56ampkbGxxc21sdnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzkzMDQsImV4cCI6MjA5NjQ1NTMwNH0.quP2UmR59c1ULUgZkqaq0kzeD8VlOY3cKH4ZaZJwtf0');
-  const must=({data,error})=>{if(error)throw new Error(error.message);return data};
-  const me={ok:false};
-  me.ready=db.auth.getSession().then(r=>me.ok=!!(r.data&&r.data.session)).catch(()=>false);
+  const db=HB.db, must=HB.must;
+  const me={ready:HB.ready};
   me.ask=async(question,parentId)=>must(await db.from('ai_questions').insert({question,parent_id:parentId||null}).select('*').single());
   me.get=async id=>must(await db.from('ai_questions').select('*').eq('id',id).single());
   me.status=async()=>must(await db.from('ai_status').select('*').eq('id',1).maybeSingle());
