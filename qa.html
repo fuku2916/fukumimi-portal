@@ -84,10 +84,10 @@ async function ask(text){
   text=text.trim(); if(!text||busy) return;
   if(text.length<2){status.textContent='もう少し長く入力してください';return}
   if(!(await AI.ready)){showLogin();return}
-  busy=true; add('me',esc(text)); q.value='';
+  busy=true; add('me',esc(text)); q.value=''; setTimeout(()=>{q.value=''},300);
   const wait=add('ai','<span class="dots"><i></i><i></i><i></i></span>掲示板と業務マニュアルを調べて、答えを考えています（20〜60秒ほど）');
   try{
-    const [row,st]=await Promise.all([AI.ask(text,last&&last.status==='answered'?last.id:null),AI.status().catch(()=>null)]);
+    const [row,st]=await Promise.all([AI.ask(text,last&&(last.status==='answered'||last.status==='no_answer')?last.id:null),AI.status().catch(()=>null)]);
     if(!st||!st.last_seen||Date.now()-new Date(st.last_seen).getTime()>3*60*1000)
       wait.innerHTML='いまは AI係がお休み中です。質問は管理者に届いているので、あとで答えが届くか、管理者から連絡があります。<br><small>（このまま待つと、答えが出たらここに表示します）</small>';
     const done=await AI.wait(row.id);
@@ -130,6 +130,7 @@ function start(){
   heard=''; sent=false; q.value='';
   rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false;
   rec.onresult=e=>{
+    if(!listening||sent) return; // 送ったあとに遅れて届く文字は使わない（入力欄に残ってしまうので）
     let t=''; for(const r of e.results) t+=r[0].transcript;
     heard=t; q.value=t; status.textContent='● '+t;
     if(e.results[e.results.length-1].isFinal) finish();
@@ -150,6 +151,7 @@ function finish(ended){
   if(!listening&&ended) return;
   listening=false; mic.classList.remove('on');
   if(!ended&&rec){try{rec.stop()}catch(_){}}
+  if(rec&&!ended) rec.onresult=null;
   if(heard.trim()&&!sent){sent=true; status.className='status'; status.textContent=''; ask(heard)}
   else if(!heard.trim()&&ended&&status.classList.contains('on')){status.className='status'; status.textContent='声が聞こえませんでした。もう一度どうぞ'}
 }
