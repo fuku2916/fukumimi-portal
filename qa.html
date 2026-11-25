@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Q&amp;A（見本）</title>
+<title>Q&amp;A</title>
 <link rel="stylesheet" href="style.css?v=14">
 <style>
 /* 上のバーと下の入力欄は動かさず、間の会話だけをスクロールする。
@@ -15,10 +15,19 @@ body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-d
 .log{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 12px;max-width:440px;width:100%;margin:0 auto}
 .hint{font-size:15px;color:var(--sub);background:#fff;border-radius:16px;padding:12px 14px;line-height:1.6}
 .msg{margin:12px 0;display:flex}
-.msg .b{max-width:85%;padding:12px 14px;border-radius:18px;font-size:17px;line-height:1.6;white-space:pre-wrap}
+.msg .b{max-width:85%;padding:12px 14px;border-radius:18px;font-size:17px;line-height:1.6}
+.me .b{white-space:pre-wrap}
 .me{justify-content:flex-end}.me .b{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
 .ai .b{background:#fff;border-bottom-left-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .src{display:block;margin-top:8px;font-size:14px;color:#1f6fb2}
+.ans{white-space:pre-wrap}
+.sent{margin:8px 0 0;font-size:15px;color:#8a5a00}
+.srcs{margin-top:10px;border-top:1px solid #eef0f2;padding-top:8px}.srcs .lbl{font-size:13px;color:var(--sub)}
+.srcs small{display:block;font-size:12px;color:var(--sub)}
+.rate{display:flex;flex-wrap:wrap;gap:6px}.rate button{margin-top:10px}
+.msg .note{margin:10px 0 0;font-size:12px;color:var(--sub)}
+.dots{display:inline-flex;gap:3px;margin-right:6px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
 .ask-admin{margin-top:10px;font-size:15px;font-weight:700;background:#fff4e0;border:1px solid #f0c98a;border-radius:12px;padding:8px 12px;color:#8a5a00}
 .bar{background:#fff;border-top:1px solid #dde1e5;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
 .inner{max-width:440px;margin:0 auto}
@@ -41,12 +50,9 @@ body{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-d
 <div class="top"><a class="back" href="index.html">← もどる</a><h1>Q&amp;A　AIに質問</h1></div>
 
 <div class="log" id="log">
-  <div class="mockbar">見本です。AIはまだつながっていません。答えは決まった例を出します。</div>
-  <a class="hint" id="baseAI" style="display:block;background:#fff4e0;color:inherit;text-decoration:none;margin-bottom:8px">✨ <b>いまはここから</b>：HUKU BASE の「AIに聞く」を開く ›<br><small>この画面の AI はまだつながっていません</small></a>
-  <div class="hint">入力欄の 🎤 を押して、話しかけてください。<br>文字で打ってもかまいません。<br>業務マニュアルと掲示板から答えを探します。</div>
-  <div class="msg me"><div class="b">電話でコロナの検査費用を聞かれたら、いくらって答えればいい？</div></div>
-  <div class="msg ai"><div class="b">コロナの検査は 1,600円 程度、インフルエンザは 1,000円 程度とご案内しています（保険3割負担の場合のめやす）。
-<a class="src" href="#">📖 業務マニュアル「電話での検査費用の案内」（11/20 更新）</a></div></div>
+  <div class="hint" id="loginBox" hidden>🔑 <b>HUKU BASE にログインすると使えます</b><br>このスマホで HUKU BASE にログインしてから、もう一度この画面を開いてください。<br>
+    <a class="big-btn" id="loginBtn" style="display:block;text-align:center;margin-top:10px;padding:12px;text-decoration:none">HUKU BASE でログインする</a></div>
+  <div class="hint" id="howto">入力欄の 🎤 を押して、話しかけてください。<br>文字で打ってもかまいません。<br>HUKU BASE の掲示板と業務マニュアルから、AI係が答えを探します（20〜60秒ほど）。</div>
 </div>
 
 <div class="bar"><div class="inner">
@@ -68,15 +74,43 @@ const log=document.getElementById('log'), q=document.getElementById('q'),
 function add(cls,html){
   const d=document.createElement('div'); d.className='msg '+cls;
   d.innerHTML='<div class="b"></div>'; d.firstChild.innerHTML=html;
-  log.appendChild(d); log.scrollTop=log.scrollHeight;
+  log.appendChild(d); log.scrollTop=log.scrollHeight; return d.firstChild;
 }
-const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function ask(text){
-  text=text.trim(); if(!text) return;
-  add('me',esc(text)); q.value='';
-  setTimeout(()=>add('ai','（見本の答え）本番では、ここに AI が業務マニュアルと掲示板から探した答えと、その出典が出ます。<br>'+
-    '<button class="ask-admin" onclick="this.textContent=\'✓ 管理者に送りました（見本）\'">答えが違う・見つからない → 管理者に聞く</button>'),600);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// 「**太字**」と行頭の「- 」「1. 」だけ見やすくする（HUKU BASE と同じ）
+const fmt=t=>esc(t).replace(/^#+\s*/gm,'').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/^\s*(?:[-*・])\s+/gm,'・');
+let last=null, busy=false; // 直前の質問（続けて聞くと、その続きとして聞く）
+async function ask(text){
+  text=text.trim(); if(!text||busy) return;
+  if(text.length<2){status.textContent='もう少し長く入力してください';return}
+  if(!(await AI.ready)){showLogin();return}
+  busy=true; add('me',esc(text)); q.value='';
+  const wait=add('ai','<span class="dots"><i></i><i></i><i></i></span>掲示板と業務マニュアルを調べて、答えを考えています（20〜60秒ほど）');
+  try{
+    const [row,st]=await Promise.all([AI.ask(text,last&&last.status==='answered'?last.id:null),AI.status().catch(()=>null)]);
+    if(!st||!st.last_seen||Date.now()-new Date(st.last_seen).getTime()>3*60*1000)
+      wait.innerHTML='いまは AI係がお休み中です。質問は管理者に届いているので、あとで答えが届くか、管理者から連絡があります。<br><small>（このまま待つと、答えが出たらここに表示します）</small>';
+    const done=await AI.wait(row.id);
+    last=done; show(wait,done);
+  }catch(e){wait.innerHTML='送れませんでした：'+esc(e.message)+'<br>電波のよいところで、もう一度どうぞ'}
+  busy=false;
 }
+function show(el,r){
+  if(!r||r.status==='pending'||r.status==='answering'){el.innerHTML='答えが出るまで時間がかかっています。あとで HUKU BASE の掲示板でも確かめられます。';return}
+  if(r.status==='error'){el.innerHTML='うまく答えを作れませんでした。言い方を変えて、もう一度聞いてみてください。';return}
+  let h='<div class="ans">'+fmt(r.answer)+'</div>';
+  if(r.status==='no_answer') h+='<p class="sent">📩 この質問は管理者に届きました。答えがわかったら、掲示板に載せてもらえます。</p>';
+  const src=[...(r.sources||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(src.length) h+='<div class="srcs"><div class="lbl">もとにした資料（新しい順）</div>'+src.map(s=>
+    (s.post_id?`<a class="src" href="${LINKS.post(s.post_id)}">📖 ${esc(s.title)}</a>`:`<span class="src">📘 ${esc(s.title)}</span>`)+
+    ((s.date||s.author)?`<small>${[s.date&&s.date.slice(0,10).replaceAll('-','/'),s.author&&esc(s.author)].filter(Boolean).join('・')}</small>`:'')).join('')+'</div>';
+  if(r.status==='answered') h+=`<div class="rate"><button class="ask-admin" data-id="${r.id}" data-r="1">👍 役に立った</button><button class="ask-admin" data-id="${r.id}" data-r="-1">答えが違う → 管理者に知らせる</button></div>`;
+  h+='<p class="note">AIの答えは間違えることがあります。大事なことは、もとの資料や管理者に確かめてください。</p>';
+  el.innerHTML=h; log.scrollTop=log.scrollHeight;
+}
+log.addEventListener('click',async e=>{const b=e.target.closest('.rate button');if(!b)return;
+  try{await AI.rate(b.dataset.id,+b.dataset.r);b.parentNode.innerHTML=b.dataset.r==='-1'?'✓ 管理者に届けました。マニュアルの改善に使います':'✓ ありがとうございます'}catch(x){status.textContent='送れませんでした：'+x.message}});
+function showLogin(){document.getElementById('loginBox').hidden=false;document.getElementById('howto').hidden=true}
 document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();ask(q.value)});
 
 // 音声入力（Chrome・Android・iPhone の Safari で使える）
@@ -126,5 +160,11 @@ function finish(ended){
 const fit=()=>{if(vv.height<innerHeight-120){b.style.height=vv.height+'px';scrollTo(0,0);log.scrollTop=log.scrollHeight}else b.style.height=''};
 vv.addEventListener('resize',fit);})();
 </script>
-<script src="links.js?v=1"></script><script>document.getElementById('baseAI').href=LINKS.board()</script>
+<script src="links.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="ai.js?v=1"></script>
+<script>
+document.getElementById('loginBtn').href=LINKS.board();
+AI.ready.then(ok=>{if(!ok)showLogin()});
+</script>
 </body></html>
