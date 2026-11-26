@@ -51,13 +51,13 @@ h2{font-size:18px;margin:22px 0 8px}
 </div>
 <script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=2"></script>
+<script src="hb.js?v=3"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
  {k:'paid', ic:'🌸',t:'有給休暇',     s:'全日・午前半日・午後半日',          fg:'#86198F',bg:'#FDF2F8',bd:'#D946A8',to:'シフト管理アプリ',real:1},
  {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ',real:1},
- {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ'},
+ {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ',real:1},
  {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）'},
  {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'タイムカード（管理者が承認）'},
 ];
@@ -78,7 +78,10 @@ const LST={sent:'sending',importing:'sending',imported:'arrived',duplicate:'dup'
 async function loadReal(){
   try{
     const rows=await HB.myLeaves();
-    HIST=rows.map(r=>({k:r.type==='off'?'off':'paid',d:r.date,x:(PAID_LABEL[r.type]||'')+(r.memo?(PAID_LABEL[r.type]?'・':'')+r.memo:''),st:LST[r.status]||'sending'}));
+    HIST=rows.map(r=>{
+      const head=r.type==='work_wish'?(Array.isArray(r.slots)?r.slots.map(x=>x.label).join('・'):''):(PAID_LABEL[r.type]||'');
+      return {k:r.type==='off'?'off':r.type==='work_wish'?'work':'paid',d:r.date,x:head+(r.memo?(head?'・':'')+r.memo:''),st:LST[r.status]||'sending'};
+    });
   }catch(e){HIST=[]}
   if($('formView').hidden) home();
   // 届けている最中の申請があれば、15秒ごとに見直す（シフト管理アプリが取り込むと「届きました」に変わる）
@@ -119,6 +122,11 @@ function form(k){
      <label class="opt"><input type="radio" name="x" value="退勤">退勤</label></div>
     <div class="lbl">③ 正しい時刻</div><input type="time" id="tm" value="18:45">
     <div class="lbl">④ 理由</div><textarea id="memo" rows="2" placeholder="例：退勤を押し忘れました"></textarea>`;
+  // 本番の出勤の希望：シフト管理アプリの画面と同じコマから選ぶ
+  if(REAL&&k==='work') body=`<div id="wkScope"></div><div class="lbl">① 日にち</div><input type="date" id="d" min="${ymd(today)}" value="${ymd(new Date(today.getTime()+14*864e5))}">
+    <div class="lbl">② 入れるコマ（いくつでも）</div><div class="opts" id="wkSlots"><div class="note">読み込み中…</div></div>
+    <div class="lbl">③ ひとこと（なくてもよい）</div><textarea id="memo" rows="2" placeholder="例：午後だけなら出られます"></textarea>
+    <div class="note">人手が足りないときに入れる日を伝えます。必ず入るわけではなく、管理者が確認して必要なときだけシフトに入ります。</div>`;
   if(REAL&&!o.real){
     const url=k==='punch'?LINKS.timecard():LINKS.shift();
     v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>
@@ -131,12 +139,25 @@ function form(k){
     <button class="submit" id="send">${REAL?'申請する':'申請する（見本）'}</button>
     <a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>
     <div class="note">届け先：${o.to}</div></div>`;
+  if(REAL&&k==='work') setupWork();
   const f=$('file'); if(f) f.onchange=()=>{const x=f.files[0]; if(!x)return;
     $('ph').innerHTML=(x.type.startsWith('image/')?`<img src="${URL.createObjectURL(x)}">`:'📄 '+esc(x.name))+'<small style="font-weight:400">押すと撮り直せます</small>'; $('ph').appendChild(f);};
   $('send').onclick=async()=>{
     const d=$('d').value; if(!d){alert('日にちを選んでください');return}
     if(k==='train'&&!(f&&f.files[0])){alert('遅延証明書の写真を選んでください');return}
     if(k==='punch'&&!$('memo').value.trim()){alert('理由を書いてください');return}
+    if(REAL&&k==='work'){
+      const pick=[...document.querySelectorAll('input[name=wk]:checked')].map(c=>({id:c.value,label:c.dataset.l}));
+      if(!WK.cur){alert('シフトの画面が見つかりません。管理者に連絡してください');return}
+      if(!pick.length){alert('入れるコマを1つ以上えらんでください');return}
+      const btn=$('send'); btn.disabled=true; btn.textContent='送っています…';
+      try{ await HB.sendLeave('work_wish', d, $('memo').value.trim(), pick, WK.cur.scope); }
+      catch(e){ btn.disabled=false; btn.textContent='申請する'; alert('送れませんでした：'+e.message); return; }
+      v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(pick.map(x=>x.label).join('・'))}</p>
+        <p class="note">シフト管理アプリに届けます。届いたら、メッセージでお知らせします。<br>管理者が確認して、承認・見送りをメッセージでお知らせします。</p>
+        <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
+      loadReal(); return;
+    }
     const x=(document.querySelector('input[name=x]:checked')||{}).value||'';
     const extra=k==='punch'?`${x} ${$('tm').value}`:k==='train'?'証明書を送信済み':(x||($('memo')&&$('memo').value)||'');
     if(REAL&&o.real){
@@ -153,6 +174,31 @@ function form(k){
       <p class="note">（見本なので、実際には送っていません）<br>結果はメッセージに届きます。</p>
       <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
   };
+}
+// 出勤の希望：シフト管理アプリが置いたコマ一覧（自分の社員番号がいる画面の分）から選ばせる
+const WK={lists:null,cur:null};
+async function setupWork(){
+  try{ if(!WK.lists) WK.lists=await HB.mySlots(); }catch(e){ WK.lists=[]; }
+  if(!$('wkSlots')) return;
+  const L=WK.lists||[];
+  if(!L.length){ $('wkSlots').innerHTML='<div class="note">シフトの画面が見つかりません。シフト管理アプリから申請するか、管理者に連絡してください。</div>'; $('send').disabled=true; return; }
+  WK.cur=L[0];
+  if(L.length>1){
+    $('wkScope').innerHTML='<div class="lbl">どこのシフト</div><div class="opts">'+L.map((x,i)=>`<label class="opt"><input type="radio" name="wks" value="${i}" ${i?'':'checked'}>${esc(x.label||x.scope)}</label>`).join('')+'</div>';
+    document.querySelectorAll('input[name=wks]').forEach(r=>r.onchange=()=>{WK.cur=L[+r.value]; drawWork();});
+  }
+  // はじめの日：2週間後から、コマのある最初の日
+  const days=Object.keys(WK.cur.slots||{}).sort(); const want=$('d').value;
+  if(!(WK.cur.slots||{})[want]){ const n=days.find(x=>x>=want)||days[days.length-1]; if(n) $('d').value=n; }
+  if(days.length) $('d').max=days[days.length-1];
+  $('d').onchange=drawWork; drawWork();
+}
+function drawWork(){
+  const d=$('d').value, list=(WK.cur&&WK.cur.slots&&WK.cur.slots[d])||[];
+  const closed=WK.cur&&(WK.cur.closed||[]).includes(d);
+  $('wkSlots').innerHTML=list.length?list.map(s=>`<label class="opt"><input type="checkbox" name="wk" value="${esc(s.id)}" data-l="${esc(s.label)}">${esc(s.label)}<small style="margin-left:auto;font-weight:400;opacity:.7">${esc(s.time||'')}</small></label>`).join('')
+    :`<div class="note">${closed?'この日は休診日です。':'この日はえらべるコマがありません。'}ほかの日をえらんでください。</div>`;
+  $('send').disabled=!list.length;
 }
 function showHome(){ $('formView').hidden=true; $('home').hidden=false; home(); }
 $('kinds').addEventListener('click',e=>{const b=e.target.closest('.kind'); if(b){history.pushState({},'','#'+b.dataset.k); form(b.dataset.k)}});

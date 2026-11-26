@@ -18,8 +18,11 @@ const HB=(()=>{
   hb.unreadMessages=async()=>{const {count}=await db.from('messages').select('id',{count:'exact',head:true}).eq('recipient_id',await hb.uid()).is('read_at',null);return count??0};
   // 申請（有給・休みの希望）：受け箱 leave_requests に1件入れる。社員番号と名前はデータベースが本人のものを付ける。
   // シフト管理アプリが取り込むと status が imported（同じ日にすでに申請があれば duplicate）になる
-  hb.sendLeave=async(type,date,memo)=>must(await db.from('leave_requests').insert({type,date,memo:memo||null}).select('id').single());
-  hb.myLeaves=async()=>must(await db.from('leave_requests').select('id, type, date, memo, status, created_at').eq('profile_id',await hb.uid())
+  // 出勤の希望（work_wish）は、えらんだコマ slots=[{id,label}] と、取り込む画面 scope も送る
+  hb.sendLeave=async(type,date,memo,slots,scope)=>must(await db.from('leave_requests').insert(type==='work_wish'?{type,date,memo:memo||null,slots,scope}:{type,date,memo:memo||null}).select('id').single());
+  // 出勤の希望でえらべるコマ：自分の社員番号がいるシフト管理の画面ごとに、日付→[{id,label,time}]
+  hb.mySlots=async()=>must(await db.rpc('my_shift_slots'));
+  hb.myLeaves=async()=>must(await db.from('leave_requests').select('id, type, date, memo, slots, status, created_at').eq('profile_id',await hb.uid())
       .order('created_at',{ascending:false}).limit(30));
   return hb;
 })();
