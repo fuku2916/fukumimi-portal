@@ -68,9 +68,9 @@
     <div id="view"></div>
   </div>
 </div>
-<script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
+<script src="points.js?v=2"></script><script src="me.js?v=3"></script><script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=7"></script>
+<script src="hb.js?v=8"></script>
 <script>
 const $=id=>document.getElementById(id), esc=ME.esc, V=$('view');
 const DOW='日月火水木金土';
@@ -89,7 +89,7 @@ function mergeRooms(list){
     else if(s.n){by[k].n=[...new Set([...(by[k].n||[]),...s.n])];}});
   return out;
 }
-const S={me:null,my:null,team:null,tc:null,scope:null,month:null,day:TODAY};
+const S={me:null,my:null,team:null,scope:null,month:null,day:TODAY};
 
 // ── 画面の切りかえ（#my #team #tc #fix） ──
 function show(t){
@@ -156,8 +156,12 @@ function viewTeam(){
 
 // ── ベースシフト（基本の勤務パターン。A週・B週） ──
 async function viewBase(){
-  V.innerHTML='<div class="empty">読み込み中…</div>';
-  try{S.base=S.base||await HB.myBaseShift()}catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
+  if(S.base===undefined){
+    V.innerHTML='<div class="empty">読み込み中…</div>'; // 2026-11-27：前に読んだものがあればすぐ出し、新しいのが届いたらもう一度描く
+    if(!S.baseP)S.baseP=HB.swr('base',HB.myBaseShift,d=>{S.base=d;if(location.hash==='#base')viewBase()})
+      .catch(e=>{if(S.base===undefined&&location.hash==='#base')V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`});
+    return;
+  }
   const row=(S.base||[]).find(r=>r.scope===S.scope)||(S.base||[])[0];
   if(!row||!row.base){V.innerHTML='<div class="empty">🗓<br>ベースシフトは、まだ出ていません。<br>管理者のシフト管理アプリが新しくなると、ここに出ます。</div>';return}
   const b=row.base, other=b.today==='A'?'B':'A';
@@ -181,8 +185,12 @@ async function viewBase(){
 
 // ── 打刻の記録 ──
 async function viewTc(){
-  V.innerHTML='<div class="empty">読み込み中…</div>';
-  try{S.tc=S.tc||await HB.myTimecard()}catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
+  if(S.tc===undefined){
+    V.innerHTML='<div class="empty">読み込み中…</div>';
+    if(!S.tcP)S.tcP=HB.swr('timecard',HB.myTimecard,d=>{S.tc=d;if(location.hash==='#tc')viewTc()})
+      .catch(e=>{if(S.tc===undefined&&location.hash==='#tc')V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`});
+    return;
+  }
   if(S.tc.nocode){V.innerHTML='<div class="empty">社員番号が登録されていないので、打刻の記録を出せません。管理者に連絡してください。</div>';return}
   const P=S.tc.punch||{},keys=Object.keys(P).sort().reverse();
   if(!keys.length){V.innerHTML='<div class="empty">⏱<br>打刻の記録はまだありません。</div>';return}
@@ -249,13 +257,20 @@ async function viewFix(){
   if(!(await HB.ready)){$('out').hidden=false;return}
   $('in').hidden=false;
   V.innerHTML='<div class="empty">読み込み中…</div>';
-  try{[S.me,S.my,S.team]=await Promise.all([HB.me(),HB.myDays(),HB.myTeamDays().catch(()=>[])])}
-  catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
-  const sc=[...new Map([...(S.my||[]),...(S.team||[])].map(r=>[r.scope,r.label||r.scope])).entries()];
-  S.scopes=sc;S.scope=sc.length?sc[0][0]:null;
-  $('scope').innerHTML=sc.map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('');
   $('scope').onchange=()=>{S.scope=$('scope').value;S.month=null;show(location.hash.slice(1))};
-  show(location.hash.slice(1));
+  // 2026-11-27：前に読んだシフトをすぐ出し、新しいのが届いたら描き直す（打刻の修正を書いている途中は描き直さない）
+  let first=true;
+  try{
+    await HB.swr('shift_main',()=>Promise.all([HB.me(),HB.myDays(),HB.myTeamDays().catch(()=>[])]),([me,my,team])=>{
+      S.me=me;S.my=my;S.team=team;
+      const sc=[...new Map([...(S.my||[]),...(S.team||[])].map(r=>[r.scope,r.label||r.scope])).entries()];
+      S.scopes=sc; if(!S.scope||!sc.some(x=>x[0]===S.scope))S.scope=sc.length?sc[0][0]:null;
+      $('scope').innerHTML=sc.map(([k,l])=>`<option value="${esc(k)}" ${k===S.scope?'selected':''}>${esc(l)}</option>`).join('');
+      const t=location.hash.slice(1);
+      if(first){first=false;show(t);return}
+      if(t==='my'||t==='team'||t===''){const y=scrollY;show(t);scrollTo(0,y)} // そっと描き直す
+    });
+  }catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
 })();
 </script>
 </body></html>

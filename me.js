@@ -20,5 +20,10 @@ const ME=(()=>{
     const [me,points,avatar]=await Promise.all([HB.me(),HB.myPoints(),HB.myAvatar().catch(()=>null)]);
     return {me,points,avatar};
   }
-  return {esc,avatarHTML,load};
+  // 2026-11-27：前に読んだ内容をすぐ paint(x) し、新しいのが届いたらもう一度 paint(x)。ログインしていなければ paint(null)
+  async function loadSWR(paint){
+    if(typeof HB==='undefined'||!(await HB.ready)){paint(null);return null}
+    return HB.swr('me_page',async()=>{const [me,points,avatar]=await Promise.all([HB.me(),HB.myPoints(),HB.myAvatar().catch(()=>null)]);return {me,points,avatar}},x=>paint(x));
+  }
+  return {esc,avatarHTML,load,loadSWR};
 })();

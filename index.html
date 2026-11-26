@@ -81,7 +81,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
 </div>
 
 </div>
-<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=2"></script><script src="me.js?v=3"></script><script src="links.js?v=2"></script>
 <script>
 // ── 試験用：見本のデータ／本物のデータ（Box の控え）の切り替え ──
 (()=>{
@@ -140,7 +140,7 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
 }).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=7"></script>
+<script src="hb.js?v=8"></script>
 <script>
 // ── HUKU BASE にログインしていれば、本物の名前・掲示板・メッセージの未読数を出す（読むだけ） ──
 // ログインしていなければ、見本のまま（掲示板の欄に「ログインすると本物が出ます」と添える）
@@ -151,26 +151,30 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
     body.insertAdjacentHTML('afterbegin','<p style="color:var(--sub);font-size:13px;margin:0 0 4px">※見本です（HUKU BASE にログインすると本物が出ます）</p>');
     return;
   }
-  try{
-    const [me,boards,unread]=await Promise.all([HB.me(),HB.boards(),HB.unreadMessages()]);
-    // 右上：自分のアイコンとランク（ポイントはデータベースのもの）
-    ME.load().then(x=>{if(!x)return;showMe(x.points.total,x.avatar,x.me&&x.me.display_name)}).catch(()=>{});
-    // 名前（名字だけ）
-    if(me&&me.display_name) document.getElementById('qName').textContent=me.display_name.split(/[\s　]/)[0]+'さんへの質問';
-    // 掲示板：自分の院を先に、全体をあとに。それぞれ新しい2件
-    const isAll=b=>/全体|本部/.test(b.name);
-    const list=[...boards].sort((a,b)=>isAll(a)-isAll(b)||a.sort_order-b.sort_order);
-    const mine=list.find(b=>!isAll(b))||list[0];
-    const per=await Promise.all(list.map(b=>HB.posts(b.id,list.length>2?1:2))); // 掲示板が3つ以上見える人（管理者）は1件ずつ
-    const md=s=>{const d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()};
-    body.innerHTML=list.map((b,i)=>per[i].length?`<b>【${esc(b.name.replace(/クリニック$/,''))}】</b>`+per[i].map(p=>
-      `<p>・${esc(p.title)}<span style="color:var(--sub)">（${md(p.created_at)}）</span>${p.is_read?'':' <b style="color:var(--red)">●</b>'}</p>`).join(''):'').join('')||'<p>新しい掲示はありません</p>';
+  // 2026-11-27：前に読んだ内容（掲示板・名前・未読数・右上のアイコン）をすぐ出し、新しいのが届いたら入れかえる
+  document.getElementById('mockTag').hidden=true;
+  document.getElementById('tMsg').href=LINKS.baseMsg();
+  ME.loadSWR(x=>{if(!x)return;showMe(x.points.total,x.avatar,x.me&&x.me.display_name)}).catch(()=>{});
+  const paint=v=>{
+    if(v.family) document.getElementById('qName').textContent=v.family+'さんへの質問';
+    body.innerHTML=v.html;
     dispatchEvent(new Event('resize')); // 行数が変わったので、画面に収まるかを測り直す
-    if(mine){const u=LINKS.boardOf(mine.id);document.querySelector('.card.board').href=u;document.getElementById('tBoard').href=u}
-    // メッセージ：HUKU BASE の未読数。押すと HUKU BASE のメッセージへ
-    window.REAL_UNREAD=unread; showUnread();
-    document.getElementById('tMsg').href=LINKS.baseMsg();
-    document.getElementById('mockTag').hidden=true;
+    if(v.mine){const u=LINKS.boardOf(v.mine);document.querySelector('.card.board').href=u;document.getElementById('tBoard').href=u}
+    window.REAL_UNREAD=v.unread; showUnread();
+  };
+  try{
+    await HB.swr('top',async()=>{
+      const [me,boards,unread]=await Promise.all([HB.me(),HB.boards(),HB.unreadMessages()]);
+      // 掲示板：自分の院を先に、全体をあとに。それぞれ新しい2件
+      const isAll=b=>/全体|本部/.test(b.name);
+      const list=[...boards].sort((a,b)=>isAll(a)-isAll(b)||a.sort_order-b.sort_order);
+      const mine=list.find(b=>!isAll(b))||list[0];
+      const per=await Promise.all(list.map(b=>HB.posts(b.id,list.length>2?1:2))); // 掲示板が3つ以上見える人（管理者）は1件ずつ
+      const md=s=>{const d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()};
+      const html=list.map((b,i)=>per[i].length?`<b>【${esc(b.name.replace(/クリニック$/,''))}】</b>`+per[i].map(p=>
+        `<p>・${esc(p.title)}<span style="color:var(--sub)">（${md(p.created_at)}）</span>${p.is_read?'':' <b style="color:var(--red)">●</b>'}</p>`).join(''):'').join('')||'<p>新しい掲示はありません</p>';
+      return {family:me&&me.display_name?me.display_name.split(/[\s　]/)[0]:'',html,mine:mine?mine.id:null,unread};
+    },paint);
   }catch(e){body.insertAdjacentHTML('beforeend','<p style="color:var(--sub);font-size:13px">HUKU BASE を読めませんでした（'+esc(e.message)+'）</p>')}
 })();
 </script>

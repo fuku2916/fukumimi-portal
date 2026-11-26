@@ -94,30 +94,38 @@
     <p class="note">ほかの人のIDで入り直すときは、ここでログアウトしてください（HUKU BASE もいっしょにログアウトになります）。</p>
   </div>
 </div>
-<script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
+<script src="points.js?v=2"></script><script src="me.js?v=3"></script><script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=7"></script><script src="avatar-edit.js?v=2"></script>
+<script src="hb.js?v=8"></script><script src="avatar-edit.js?v=2"></script>
 <script>
 (async()=>{
   const $=id=>document.getElementById(id);
   const BASE=LINKS.manual().replace(/#.*$/,'');
   $('loginBtn').href=BASE;
   $('pwBtn').href=BASE+'#/me';
-  let x=null;
-  try{x=await ME.load()}catch(e){$('loading').textContent='読み込めませんでした（'+e.message+'）';return}
+  // 2026-11-27：前に読んだ内容をすぐ出し、新しいのが届いたら描き直す
+  let av={},name='';
+  const edit=()=>AVEDIT.open(av,name,n=>{av=n;showAv();alert('アイコンを保存しました')});
+  const showAv=()=>{$('av').innerHTML=ME.avatarHTML(av,name,110);$('pend').hidden=!av.pending};
+  $('av').onclick=edit;$('iconBtn').onclick=edit;
+  $('logout').onclick=async()=>{
+    if(!confirm('ログアウトします。よろしいですか？'))return;
+    $('logout').disabled=true;$('logout').textContent='ログアウトしています…';
+    try{await HB.signOut()}catch(e){}
+    location.href=BASE;   // HUKU BASE のログイン画面へ
+  };
+  let clinicsAsked=false;
+  try{await ME.loadSWR(x=>{
   $('loading').hidden=true;
   if(!x){$('out').hidden=false;return}
   $('in').hidden=false;
-  const p=x.points,name=(x.me&&x.me.display_name)||'';
+  if(!clinicsAsked){clinicsAsked=true;HB.swr('clinics',HB.myClinics,c=>{$('cl').textContent=c&&c.length?c.join('・'):''}).catch(()=>{});}
+  const p=x.points; name=(x.me&&x.me.display_name)||'';
   const r=PTS.rank(p.total),nx=PTS.next(p.total);
   $('hero').style.background=r.bg;$('hero').style.color=r.fg;
-  let av=x.avatar||{};
-  const showAv=()=>{$('av').innerHTML=ME.avatarHTML(av,name,110);$('pend').hidden=!av.pending};
+  av=x.avatar||{};
   showAv();
-  const edit=()=>AVEDIT.open(av,name,n=>{av=n;showAv();alert('アイコンを保存しました')});
-  $('av').onclick=edit;$('iconBtn').onclick=edit;
   $('nm').textContent=name+' さん';
-  HB.myClinics().then(c=>{$('cl').textContent=c.length?c.join('・'):''}).catch(()=>{});
   $('rk').textContent=r.name;$('pt').textContent=p.total+'P';
   $('nx').textContent=nx?`あと ${nx.need}P で${nx.name}`:'いちばん上のランクです！';
   const md=s=>{const d=new Date(s+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()};
@@ -128,12 +136,7 @@
     const hi=a[i+1]?a[i+1].min:null;
     const rng=k.min<0?`${hi}Pまで`:hi!=null?`${k.min+1}〜${hi}P`:`${k.min+1}P から`;
     return `<div class="ld ${k.name===r.name?'on':''}" style="background:${k.bg}"><span>${k.name}</span><span>${rng}</span></div>`}).join('');
-  $('logout').onclick=async()=>{
-    if(!confirm('ログアウトします。よろしいですか？'))return;
-    $('logout').disabled=true;$('logout').textContent='ログアウトしています…';
-    try{await HB.signOut()}catch(e){}
-    location.href=BASE;   // HUKU BASE のログイン画面へ
-  };
+  })}catch(e){$('loading').hidden=false;$('loading').textContent='読み込めませんでした（'+e.message+'）'}
 })();
 </script>
 </body></html>

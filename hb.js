@@ -39,7 +39,20 @@ HB.myClinics=async()=>{const r=HB.must(await HB.db.rpc('my_facilities'));return 
 HB.challengeToday=async()=>HB.must(await HB.db.rpc('challenge_today'));
 HB.challengeAnswer=async(qid,pick)=>HB.must(await HB.db.rpc('challenge_answer',{qid,p_pick:pick}));
 // ログアウト（HUKU BASE もいっしょにログアウトになる）
-HB.signOut=async()=>{await HB.db.auth.signOut()};
+HB.signOut=async()=>{HB.cacheClear();await HB.db.auth.signOut()};
+// ── 2026-11-27 前に読んだ内容をスマホに覚えておき、開いた瞬間に出す（そのあと新しい内容に入れかえる）──
+// 覚える場所は人ごと（ログインしている人の番号つき）。ログアウトすると消す。電波が弱くても画面が白くならない
+HB.cacheClear=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf('portal_cache_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}};
+HB.cacheGet=async k=>{try{const u=await HB.uid();if(!u)return undefined;const v=JSON.parse(localStorage.getItem('portal_cache_'+u+'_'+k)||'null');return v?v.d:undefined}catch(e){return undefined}};
+HB.cacheSet=async(k,d)=>{try{const u=await HB.uid();if(u)localStorage.setItem('portal_cache_'+u+'_'+k,JSON.stringify({d,at:Date.now()}))}catch(e){}};
+// swr(名前, 読む関数, 描く関数)：覚えていれば すぐ paint(前の内容, true)、読めたら paint(新しい内容, false)。
+// 読めなかったときは、前の内容が出ていればそのまま（エラーにしない）
+HB.swr=async(k,fetcher,paint)=>{
+  const old=await HB.cacheGet(k);
+  if(old!==undefined){try{paint(old,true)}catch(e){console.warn(e)}}
+  try{const d=await fetcher();HB.cacheSet(k,d);paint(d,false);return d}
+  catch(e){if(old===undefined)throw e;console.warn('swr',k,e&&e.message);return old}
+};
 // 自分のアイコンを決める（マイページ）。シフト管理アプリが取り込んで、打刻のビー玉にも出る
 HB.setMyAvatar=async(color,icon,img)=>HB.must(await HB.db.rpc('set_my_avatar',{p_color:color,p_icon:icon||'',p_img:img||''}));
 // ── 2026-11-26 シフト管理（案A：スタッフは入口だけを使う） ──
