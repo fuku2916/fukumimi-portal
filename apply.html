@@ -26,6 +26,15 @@ h2{font-size:18px;margin:22px 0 8px}
 .lbl{font-size:16px;font-weight:700;margin:14px 0 6px}
 .form input[type=date],.form input[type=time],.form textarea{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c9ced4;border-radius:12px}
 .opts{display:flex;flex-direction:column;gap:8px}
+.week{border:1px solid #dde1e5;border-radius:14px;padding:8px 12px;margin:10px 0 4px;background:#fafbfc}
+.week .wh{font-size:14px;font-weight:700;color:#5b6470;margin-bottom:2px}
+.week .wr{display:flex;gap:10px;padding:7px 4px;border-top:1px dashed #e3e6ea;font-size:15px;line-height:1.45}
+.week .wh+.wr{border-top:0}
+.week .wr.sel{background:var(--bg2);border-radius:10px;border-top-color:transparent;font-weight:700}
+.week .wd{flex:0 0 auto;min-width:6.6em;white-space:nowrap;font-weight:700}
+.week .wd.sun{color:#c0392b}.week .wd.sat{color:#1d5fa5}
+.week .wx{flex:1;min-width:0}
+.week .off{color:#8a929c}
 .trange{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;margin-bottom:8px}
 .trange input{flex:1;min-width:0}
 .trange span{width:3em}
@@ -54,7 +63,7 @@ h2{font-size:18px;margin:22px 0 8px}
 </div>
 <script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=4"></script>
+<script src="hb.js?v=5"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
@@ -145,6 +154,7 @@ function form(k){
     <a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>
     <div class="note">届け先：${o.to}</div></div>`;
   if(REAL&&k==='work') setupWork();
+  if((k==='paid'||k==='off'||k==='work')&&$('d')) setupWeek();
   const f=$('file'); if(f) f.onchange=()=>{const x=f.files[0]; if(!x)return;
     $('ph').innerHTML=(x.type.startsWith('image/')?`<img src="${URL.createObjectURL(x)}">`:'📄 '+esc(x.name))+'<small style="font-weight:400">押すと撮り直せます</small>'; $('ph').appendChild(f);};
   $('send').onclick=async()=>{
@@ -198,6 +208,41 @@ async function setupWork(){
     document.querySelectorAll('input[name=wks]').forEach(r=>r.onchange=()=>{WK.cur=L[+r.value]; say();});
   }
   if($('wkSay')) say();
+}
+// ── 日にちを選ぶと、その週（月〜日）の自分のシフトを、日にちのすぐ下に出す ──
+// 本番：シフト管理アプリが置いた「公開済みのシフト」の自分の分だけ。見本：それらしい例
+const MYD={rows:null};
+const REQL={paid_full:'🌸 有給',paid_am:'🌸 有給（午前）',paid_pm:'🌸 有給（午後）',off:'📅 休みの希望',work_wish:'🙋 出勤の希望'};
+function sampleDays(){ const o={}; for(let i=-7;i<60;i++){ const x=new Date(today.getTime()+i*864e5), w=x.getDay(), dk=ymd(x);
+  if(w===0)continue; if(w===3){o[dk]={s:[{l:'午後外来',t:'15:00-19:00'}]};continue;} if(w===6){o[dk]={s:[{l:'午前外来',t:'9:00-13:00'}]};continue;}
+  if(w===1||w===4)o[dk]={s:[{l:'午前外来 １診',t:'9:30-13:00'},{l:'午後手術',t:'13:00-16:00'}]}; }
+  return [{scope:'sample',label:'見本',days:o}]; }
+async function setupWeek(){
+  if(!$('wkWeek')) $('d').insertAdjacentHTML('afterend','<div class="week" id="wkWeek"></div>');
+  const box=$('wkWeek'); box.innerHTML='<div class="wh">この週のあなたのシフト</div><div class="note">読み込み中…</div>';
+  if(!REAL) MYD.rows=sampleDays();
+  else if(!MYD.rows){ try{ MYD.rows=await HB.myDays(); }catch(e){ MYD.rows=[]; } }
+  const draw=()=>{
+    if(!$('wkWeek'))return;
+    const d=$('d').value; if(!d){ box.innerHTML=''; return; }
+    const R=MYD.rows||[];
+    let h='<div class="wh">この週のあなたのシフト</div>';
+    if(!R.length){ box.innerHTML=h+'<div class="note">まだシフトが届いていません。シフトが公開されると、ここに出ます。</div>'; return; }
+    const last=R.map(r=>Object.keys(r.days||{}).sort().pop()||'').sort().pop()||'';
+    const b=new Date(d+'T00:00'), mon=new Date(b.getFullYear(),b.getMonth(),b.getDate()-((b.getDay()+6)%7));
+    for(let i=0;i<7;i++){
+      const x=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i), dk=ymd(x), w=x.getDay();
+      const parts=[];
+      R.forEach(r=>{ const o=(r.days||{})[dk]; if(!o)return; const pre=R.length>1?esc(r.label||'')+'：':'';
+        if(o.c) parts.push('<span class="off">休診</span>');
+        if(o.s) parts.push(pre+o.s.map(s=>esc(s.l)+(s.t?' <small>'+esc(s.t)+'</small>':'')).join('<br>'));
+        if(o.r) parts.push(REQL[o.r]||'申請あり'); });
+      const txt=parts.length?parts.join('<br>'):(dk>last?'<span class="off">まだ決まっていません</span>':'<span class="off">休み</span>');
+      h+=`<div class="wr${dk===d?' sel':''}"><span class="wd${w===0?' sun':w===6?' sat':''}">${x.getMonth()+1}/${x.getDate()}（${'日月火水木金土'[w]}）</span><span class="wx">${txt}</span></div>`;
+    }
+    box.innerHTML=h;
+  };
+  $('d').addEventListener('input',draw); $('d').addEventListener('change',draw); draw();
 }
 function showHome(){ $('formView').hidden=true; $('home').hidden=false; home(); }
 $('kinds').addEventListener('click',e=>{const b=e.target.closest('.kind'); if(b){history.pushState({},'','#'+b.dataset.k); form(b.dataset.k)}});
