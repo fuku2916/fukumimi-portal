@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>スタッフ入口（見本）</title>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 <style>
 /* ボタンが画面に収まっているあいだは、画面全体を動かさない（スクロールしない） */
 html.lock,html.lock body{height:100%;overflow:hidden;overscroll-behavior:none}
@@ -15,10 +15,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
 .home .row1 .board p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mecard{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:4px;padding:8px 6px!important;text-align:center;background:#3aa7e8;color:#fff;overflow:hidden}
 .mecard a{color:inherit;text-decoration:none}
-.av{flex:0 0 auto;width:clamp(48px,8dvh,72px);height:clamp(48px,8dvh,72px);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 3px rgba(255,255,255,.75),0 2px 6px rgba(0,0,0,.2)}
-.av-img{width:100%;height:100%;object-fit:cover}
-.av-emoji{font-size:clamp(28px,5dvh,46px);line-height:1}
-.av-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:clamp(20px,3.6dvh,32px)}
+.av{flex:0 0 auto;width:clamp(56px,9dvh,80px);height:clamp(56px,9dvh,80px);border-radius:50%;display:block}
 .rk{display:block;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.3)}
 .rk small{display:block;font-size:11px;font-weight:700}
 .rk b{display:block;font-size:15px}
@@ -53,7 +50,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
   <span class="more">続きを見る ›</span>
 </a>
 <div class="card mecard" id="meCard">
-  <a class="av" id="meAv" href="me.html" aria-label="マイページ（ランク・ログアウト）"><span class="av-init" style="background:#7C3AED">山</span></a>
+  <a class="av" id="meAv" href="me.html" aria-label="マイページ（ランク・ログアウト）"></a>
   <a class="rk" href="me.html"><small>現在のランク</small><b id="meRank">ブルー</b><span id="mePts">0P</span></a>
   <a class="chal" href="challenge.html">ポイントアップ<br>チャレンジ</a>
 </div>
@@ -84,7 +81,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
 </div>
 
 </div>
-<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=2"></script><script src="me.js?v=1"></script><script src="links.js?v=2"></script>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
 <script>
 // ── 試験用：見本のデータ／本物のデータ（Box の控え）の切り替え ──
 (()=>{
@@ -112,8 +109,8 @@ html.lock body{position:fixed;inset:0;min-height:0}
 // 右上のカード：アイコン・ランク・ポイント（ログインしていなければ見本の数字）
 function showMe(p,av,name){const r=PTS.rank(p),c=document.getElementById('meCard');c.style.background=r.bg;c.style.color=r.fg;
   document.getElementById('meRank').textContent=r.name;document.getElementById('mePts').textContent=p+'P';
-  if(av!==undefined)document.getElementById('meAv').innerHTML=ME.avatarHTML(av,name)}
-showMe(PTS.total(),{icon:'🍓'});
+  if(av!==undefined)document.getElementById('meAv').innerHTML=ME.avatarHTML(av,name,document.getElementById('meAv').offsetWidth||72)}
+showMe(PTS.total(),{icon:'🍓',color:'#DB2777'},'山田 花子');
 // 掲示板・業務マニュアル・シフト管理は、本番のアプリのその画面へ直接飛ぶ
 document.getElementById('tBoard').href=LINKS.board();
 document.getElementById('tManual').href=LINKS.manual();

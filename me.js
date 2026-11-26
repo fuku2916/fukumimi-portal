@@ -1,14 +1,18 @@
 // 自分のアイコンとランク（トップ画面の右上・マイページ・チャレンジで使う）
-// アイコンはシフト管理アプリの「アイコン設定」（写真／絵文字／色）をそのまま使う。決めていない人は名前の1文字目
+// アイコンはシフト管理アプリの「アイコン設定」（写真／絵文字／色）を、打刻のビー玉と同じ見た目で出す（フルネームつき）
 const ME=(()=>{
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  // 丸いアイコンの中身（HTML）
-  function avatarHTML(av,name){
-    const nm=String(name||'').trim();
-    if(av&&av.img&&/^data:image\/(jpeg|png|webp);base64,/.test(av.img)) return `<img class="av-img" src="${av.img}" alt="">`;
-    if(av&&av.icon) return `<span class="av-emoji">${esc(av.icon)}</span>`;
+  // 丸いアイコン：タイムカードの打刻画面の「ビー玉」と同じデザイン（色の玉＋光沢＋フルネーム。写真のときは黒縁取りの白文字）
+  // px＝玉の直径（文字の大きさを決める。ビー玉と同じく 半径×0.42、11〜18px）
+  function avatarHTML(av,name,px=72){
+    const nm=esc(String(name||'').trim());
     const col=(av&&/^#[0-9a-fA-F]{3,8}$/.test(av.color||''))?av.color:'#7C3AED';
-    return `<span class="av-init" style="background:${col}">${esc(nm.slice(0,1)||'？')}</span>`;
+    const img=(av&&av.img&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(av.img))?av.img:'';
+    const emo=(!img&&av&&av.icon&&av.icon!=='initial')?`<span class="em">${esc(av.icon)}</span>`:'';
+    const bg=img?`radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%), url('${img}') center/cover, ${col}`
+                :`radial-gradient(circle at 32% 26%, rgba(255,255,255,.75), rgba(255,255,255,0) 46%), ${col}`;
+    const fs=Math.max(11,Math.min(18,Math.round(px/2*0.42)));
+    return `<div class="mb${img?' photo':''}" style="background:${bg};font-size:${fs}px"><div class="nm">${emo}${nm}</div></div>`;
   }
   // ログインしていれば {me, points, avatar}。していなければ null
   async function load(){

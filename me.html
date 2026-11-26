@@ -2,13 +2,10 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>マイページ</title>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 <style>
 .hero{border-radius:22px;padding:18px 16px;color:#fff;text-align:center;background:#3aa7e8;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.hero .av{width:96px;height:96px;margin:0 auto 8px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 4px rgba(255,255,255,.75),0 2px 8px rgba(0,0,0,.2)}
-.av-img{width:100%;height:100%;object-fit:cover}
-.av-emoji{font-size:60px;line-height:1}
-.av-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:42px}
+.hero .av{width:110px;height:110px;margin:0 auto 8px;border-radius:50%}
 .hero .nm{font-size:24px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.3)}
 .hero .cl{font-size:14px;opacity:.95;margin-top:2px}
 .hero .rk{margin-top:12px;font-size:15px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.3)}
@@ -30,12 +27,12 @@
 /* アイコンの編集 */
 .hero .av{position:relative;cursor:pointer}
 .av-edit{position:absolute;right:-2px;bottom:-2px;background:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.hero .avw{position:relative;width:96px;margin:0 auto 8px}
+.hero .avw{position:relative;width:110px;margin:0 auto 8px}
 .hero .avw .av{margin:0}
 .ae-bg{position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 12px}
 .ae-box{background:#fff;border-radius:20px;padding:16px;width:100%;max-width:420px}
 .ae-box h3{margin:0 0 10px;font-size:20px}
-.ae-prev{width:96px;height:96px;margin:0 auto 6px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 1px #dde1e5,0 2px 8px rgba(0,0,0,.15)}
+.ae-prev{width:110px;height:110px;margin:0 auto 6px;border-radius:50%}
 .ae-lbl{font-size:15px;font-weight:700;margin:14px 0 6px}
 .ae-lbl small{font-weight:400;color:var(--sub);font-size:12px}
 .ae-pal{display:flex;flex-wrap:wrap;gap:9px}
@@ -97,9 +94,9 @@
     <p class="note">ほかの人のIDで入り直すときは、ここでログアウトしてください（HUKU BASE もいっしょにログアウトになります）。</p>
   </div>
 </div>
-<script src="points.js?v=2"></script><script src="me.js?v=1"></script><script src="links.js?v=2"></script>
+<script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=3"></script><script src="avatar-edit.js?v=1"></script>
+<script src="hb.js?v=3"></script><script src="avatar-edit.js?v=2"></script>
 <script>
 (async()=>{
   const $=id=>document.getElementById(id);
@@ -115,7 +112,7 @@
   const r=PTS.rank(p.total),nx=PTS.next(p.total);
   $('hero').style.background=r.bg;$('hero').style.color=r.fg;
   let av=x.avatar||{};
-  const showAv=()=>{$('av').innerHTML=ME.avatarHTML(av,name);$('pend').hidden=!av.pending};
+  const showAv=()=>{$('av').innerHTML=ME.avatarHTML(av,name,110);$('pend').hidden=!av.pending};
   showAv();
   const edit=()=>AVEDIT.open(av,name,n=>{av=n;showAv();alert('アイコンを保存しました')});
   $('av').onclick=edit;$('iconBtn').onclick=edit;

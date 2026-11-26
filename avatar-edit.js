@@ -91,7 +91,7 @@ const AVEDIT=(()=>{
     document.body.appendChild(bg);
     const $=s=>bg.querySelector(s);
     const show=()=>{
-      $('#aePrev').innerHTML=ME.avatarHTML({color:d.color,icon:d.icon,img:d.img||null},name);
+      $('#aePrev').innerHTML=ME.avatarHTML({color:d.color,icon:d.icon,img:d.img||null},name,110);
       bg.querySelectorAll('#aePal button').forEach(b=>b.classList.toggle('on',b.dataset.c===d.color));
       $('#aeNoImg').hidden=!d.img;
     };
