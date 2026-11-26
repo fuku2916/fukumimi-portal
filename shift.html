@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>シフト管理</title>
+<link rel="stylesheet" href="style.css?v=15">
+<style>
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:sticky;top:61px;z-index:2;background:var(--bg);padding:8px 0}
+.tab{font:inherit;font-size:13px;font-weight:800;border:2px solid #c9ced4;background:#fff;color:var(--ink);border-radius:14px;padding:8px 2px;cursor:pointer;line-height:1.3}
+.tab .i{display:block;font-size:22px}
+.tab.on{border-color:#185FA5;background:#EFF6FF;color:#185FA5}
+.box{background:#fff;border-radius:18px;padding:12px 14px;margin-top:10px}
+.mnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+.mnav b{font-size:20px}
+.nb{font:inherit;font-size:16px;font-weight:800;border:0;background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer}
+.nb:disabled{opacity:.35}
+.day{display:flex;gap:10px;align-items:flex-start;background:#fff;border-radius:14px;padding:10px 12px;margin-top:6px}
+.day.today{box-shadow:inset 0 0 0 3px #185FA5}
+.day .d{flex:0 0 66px;font-weight:800;font-size:16px}
+.day .d small{display:block;font-size:12px;font-weight:700}
+.sun{color:#C92A2A}.sat{color:#1864AB}
+.day .c{flex:1;min-width:0;font-size:15px;line-height:1.55}
+.sl{display:block}.sl b{font-size:16px}.sl span{color:var(--sub);font-size:13px;margin-left:4px}
+.off{color:var(--sub)}
+.chip{display:inline-block;font-size:12px;font-weight:700;border-radius:8px;padding:1px 8px;margin-top:2px;background:#FDF2F8;color:#86198F}
+.week{font-size:13px;font-weight:800;color:var(--sub);margin:14px 2px 0}
+.dates{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
+.dates::-webkit-scrollbar{display:none}
+.dt{flex:0 0 auto;font:inherit;font-size:14px;font-weight:800;border:2px solid #c9ced4;background:#fff;border-radius:12px;padding:6px 10px;cursor:pointer;text-align:center;line-height:1.2}
+.dt small{display:block;font-size:11px}
+.dt.on{border-color:#185FA5;background:#185FA5;color:#fff}
+.dt.on .sun,.dt.on .sat{color:#fff}
+.slot{border-top:1px solid #eef0f2;padding:8px 0}
+.slot:first-of-type{border-top:0}
+.slot .h{font-weight:800;font-size:16px}.slot .h span{font-weight:400;color:var(--sub);font-size:13px;margin-left:6px}
+.nm{display:inline-block;background:#F1F3F5;border-radius:999px;padding:3px 10px;margin:4px 4px 0 0;font-size:15px}
+.nm.me{background:#185FA5;color:#fff;font-weight:800}
+.tc{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:10px 12px;margin-top:6px;flex-wrap:wrap}
+.tc .d{font-weight:800;min-width:76px}
+.tc .t{font-size:15px}.tc .t b{font-size:17px}
+.tc .w{margin-left:auto;font-weight:800;color:#166534}
+.sum{display:flex;justify-content:space-between;align-items:center;background:#F0FDF4;border:1px solid #86EFAC;border-radius:14px;padding:10px 14px;margin-top:10px;font-weight:800;color:#166534}
+.lbl{font-size:16px;font-weight:800;margin:14px 0 6px}
+.form input,.form select,.form textarea{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c9ced4;border-radius:12px;background:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two small{display:block;font-size:13px;color:var(--sub);margin-bottom:4px;font-weight:700}
+.cr{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:10px 12px;margin-top:6px;font-size:15px}
+.cr small{display:block;color:var(--sub);font-size:12px}
+.st{font-size:13px;font-weight:800;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.st.pending{background:#FFF7ED;color:#C2410C}.st.approved{background:#ECFDF5;color:#065F46}.st.rejected{background:#FEF2F2;color:#B91C1C}.st.sent{background:#EFF6FF;color:#1D4ED8}
+.note{font-size:13px;color:var(--sub);line-height:1.6;margin:8px 2px 0}
+.empty{background:#fff;border-radius:16px;padding:22px 14px;text-align:center;color:var(--sub);margin-top:10px;font-size:15px;line-height:1.7}
+.scope{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:12px;border:1px solid #c9ced4;margin-top:8px;background:#fff}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1>📅 シフト管理</h1></div>
+<div class="wrap">
+  <div id="out" hidden class="empty">🔑<br>シフトは、ログインすると見られます。<br><a class="big-btn" id="loginBtn" href="#">ログインする</a></div>
+  <div id="in" hidden>
+    <div class="tabs" role="tablist">
+      <button class="tab" data-t="my"><span class="i">🙋</span>自分の<br>シフト</button>
+      <button class="tab" data-t="team"><span class="i">👥</span>みんなの<br>シフト</button>
+      <button class="tab" data-t="tc"><span class="i">⏱</span>打刻の<br>記録</button>
+      <button class="tab" data-t="fix"><span class="i">🛠</span>打刻の<br>修正</button>
+    </div>
+    <select class="scope" id="scope" hidden></select>
+    <div id="view"></div>
+  </div>
+</div>
+<script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="hb.js?v=6"></script>
+<script>
+const $=id=>document.getElementById(id), esc=ME.esc, V=$('view');
+const DOW='日月火水木金土';
+const pad=n=>String(n).padStart(2,'0'), ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const TODAY=ymd(new Date());
+const md=k=>{const d=new Date(k+'T00:00:00');return {m:d.getMonth()+1,d:d.getDate(),w:d.getDay()}};
+const wcls=w=>w===0?'sun':w===6?'sat':'';
+const REQL={paid_full:'🌸 有給',paid_am:'🌸 有給（午前）',paid_pm:'🌸 有給（午後）',off:'📅 休みの希望',work_wish:'🙋 出勤の希望'};
+const S={me:null,my:null,team:null,tc:null,scope:null,month:null,day:TODAY};
+
+// ── 画面の切りかえ（#my #team #tc #fix） ──
+function show(t){
+  if(!['my','team','tc','fix'].includes(t))t='my';
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  history.replaceState(null,'','#'+t);
+  $('scope').hidden=!(t==='my'||t==='team')||!S.scopes||S.scopes.length<2;
+  ({my:viewMy,team:viewTeam,tc:viewTc,fix:viewFix})[t]();
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
+
+// ── 自分のシフト（ひと月ずつ） ──
+function months(days){const ms=[...new Set(Object.keys(days||{}).map(k=>k.slice(0,7)))].sort();const cur=TODAY.slice(0,7);if(!ms.includes(cur))ms.push(cur);return ms.sort()}
+function monthNav(ms,onGo){
+  if(!S.month||!ms.includes(S.month))S.month=ms.includes(TODAY.slice(0,7))?TODAY.slice(0,7):ms[0];
+  const i=ms.indexOf(S.month),[y,m]=S.month.split('-');
+  const el=document.createElement('div');el.className='mnav';
+  el.innerHTML=`<button class="nb" ${i<=0?'disabled':''}>◀ 前の月</button><b>${+y}年${+m}月</b><button class="nb" ${i>=ms.length-1?'disabled':''}>次の月 ▶</button>`;
+  const [p,,n]=el.children;p.onclick=()=>{S.month=ms[i-1];onGo()};n.onclick=()=>{S.month=ms[i+1];onGo()};
+  return el;
+}
+function curRow(rows){return (rows||[]).find(r=>r.scope===S.scope)||(rows||[])[0]}
+function viewMy(){
+  const row=curRow(S.my);
+  if(!row){V.innerHTML='<div class="empty">公開されたシフトがまだありません。<br>管理者がシフトを公開すると、ここに出ます。</div>';return}
+  const days=row.days||{};
+  V.innerHTML='';V.appendChild(monthNav(months(days),viewMy));
+  const keys=Object.keys(days).filter(k=>k.startsWith(S.month)).sort();
+  if(!keys.length){V.insertAdjacentHTML('beforeend','<div class="empty">この月の勤務は、まだ公開されていません。</div>');return}
+  let html='',lastW=null;
+  keys.forEach(k=>{
+    const o=days[k],{m,d,w}=md(k);
+    const mon=new Date(k+'T00:00:00');mon.setDate(mon.getDate()-((w+6)%7));const wk=ymd(mon);
+    if(wk!==lastW){lastW=wk;const a=md(wk);html+=`<div class="week">${a.m}/${a.d}（月）の週</div>`}
+    const body=o.c?'<span class="off">休診</span>':(o.s||[]).map(s=>`<span class="sl"><b>${esc(s.l)}</b><span>${esc(s.t||'')}</span></span>`).join('')||'<span class="off">お休み</span>';
+    html+=`<div class="day ${k===TODAY?'today':''}"><div class="d ${wcls(w)}">${m}/${d}<small>（${DOW[w]}）</small></div><div class="c">${body}${o.r?`<span class="chip">${REQL[o.r]||'申請'}</span>`:''}</div></div>`;
+  });
+  V.insertAdjacentHTML('beforeend',html+`<p class="note">${esc(row.label||'')}のシフトです（公開されたもの）。勤務の日だけ出ています。休み・有給の申請は「申請」から出せます。</p>`);
+  const t=V.querySelector('.day.today');if(t)t.scrollIntoView({block:'center'});
+}
+
+// ── みんなのシフト（1日ずつ） ──
+function viewTeam(){
+  const row=curRow(S.team);
+  if(!row){V.innerHTML='<div class="empty">みんなのシフトは、まだ準備中です。<br>管理者のシフト管理アプリが新しくなると、ここに出ます。</div>';return}
+  const days=row.days||{};
+  const keys=Object.keys(days).sort();
+  if(!keys.includes(S.day))S.day=keys.find(k=>k>=TODAY)||keys[keys.length-1];
+  const myName=(S.me&&S.me.display_name||'').replace(/[\s　]/g,'');
+  V.innerHTML=`<div class="dates" id="dates">${keys.map(k=>{const {m,d,w}=md(k);return `<button class="dt ${k===S.day?'on':''}" data-k="${k}"><span class="${wcls(w)}">${m}/${d}</span><small class="${wcls(w)}">${DOW[w]}</small></button>`}).join('')}</div><div id="dayBox"></div>`;
+  const draw=()=>{
+    const o=days[S.day]||{},{m,d,w}=md(S.day);
+    let h=`<div class="box"><div style="font-size:20px;font-weight:800" class="${wcls(w)}">${m}月${d}日（${DOW[w]}）${S.day===TODAY?' 今日':''}</div>`;
+    if(o.c)h+='<p class="off" style="font-size:17px">休診です</p>';
+    else (o.s||[]).forEach(s=>{h+=`<div class="slot"><div class="h">${esc(s.l)}<span>${esc(s.t||'')}</span></div>${(s.n||[]).length?(s.n||[]).map(n=>`<span class="nm ${n.replace(/[\s　]/g,'')===myName?'me':''}">${esc(n)}</span>`).join(''):'<span class="off">（まだだれも入っていません）</span>'}</div>`});
+    h+=`</div><p class="note">${esc(row.label||'')}の公開されたシフトです。自分の名前は青で出ます。</p>`;
+    $('dayBox').innerHTML=h;
+    document.querySelectorAll('.dt').forEach(b=>b.classList.toggle('on',b.dataset.k===S.day));
+  };
+  $('dates').onclick=e=>{const b=e.target.closest('.dt');if(b){S.day=b.dataset.k;draw()}};
+  draw();
+  const on=$('dates').querySelector('.dt.on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+}
+
+// ── 打刻の記録 ──
+async function viewTc(){
+  V.innerHTML='<div class="empty">読み込み中…</div>';
+  try{S.tc=S.tc||await HB.myTimecard()}catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
+  if(S.tc.nocode){V.innerHTML='<div class="empty">社員番号が登録されていないので、打刻の記録を出せません。管理者に連絡してください。</div>';return}
+  const P=S.tc.punch||{},keys=Object.keys(P).sort().reverse();
+  if(!keys.length){V.innerHTML='<div class="empty">⏱<br>打刻の記録はまだありません。</div>';return}
+  const hm=s=>{const m=/^(\d{1,2}):(\d{2})$/.exec(s||'');return m?+m[1]*60+ +m[2]:null};
+  const brk=w=>w>480?60:w>360?45:0, fmt=n=>Math.floor(n/60)+'時間'+pad(n%60)+'分';
+  // 給与の締め（11日〜10日）ごとに分ける
+  const per=k=>{const d=new Date(k+'T00:00:00');if(d.getDate()<11)d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
+  const groups={};keys.forEach(k=>{(groups[per(k)]=groups[per(k)]||[]).push(k)});
+  let html='';
+  Object.keys(groups).sort().reverse().forEach(g=>{
+    const [y,m]=g.split('-').map(Number),nm=m===12?1:m+1;
+    let tot=0,n=0,rows='';
+    groups[g].forEach(k=>{
+      const p=P[k]||{},{m:mm,d,w}=md(k);
+      let work=0,ok=false;
+      [[p.in,p.out],[p.in2,p.out2]].forEach(([a,b])=>{const x=hm(a),y2=hm(b);if(x!=null&&y2!=null&&y2>x){work+=y2-x;ok=true}});
+      if(ok){work-=brk(work);tot+=work;n++}
+      const t2=(p.in2||p.out2)?`<br>2回め 出 <b>${esc(p.in2||'—')}</b>　退 <b>${esc(p.out2||'—')}</b>`:'';
+      rows+=`<div class="tc"><div class="d ${wcls(w)}">${mm}/${d}（${DOW[w]}）</div><div class="t">出 <b>${esc(p.in||'—')}</b>　退 <b>${esc(p.out||'—')}</b>${t2}</div><div class="w">${ok?'実働 '+fmt(work):'<span class="off">実働 —</span>'}</div></div>`;
+    });
+    html+=`<div class="week">${m}/11〜${nm}/10 の分</div>${rows}<div class="sum"><span>実働の合計（${n}日）</span><span>${fmt(tot)}</span></div>`;
+  });
+  const at=S.tc.at?new Date(S.tc.at):null;
+  V.innerHTML=html+`<p class="note">タイムカードの記録です${at?`（${at.getMonth()+1}/${at.getDate()} ${pad(at.getHours())}:${pad(at.getMinutes())} の控え）`:''}。休憩は、6時間をこえると45分、8時間をこえると60分として計算しています。まちがいがあれば「打刻の修正」から申告してください。</p>`;
+}
+
+// ── 打刻の修正 ──
+const REASONS=['打刻忘れ','iPad不具合','出勤時に混雑して打刻できなかった','退勤時に対応中で打刻できなかった','押し間違い','その他'];
+const STL={pending:'⏳ 確認待ち',approved:'✓ 反映済み',rejected:'✕ 却下'};
+async function viewFix(){
+  const min=ymd(new Date(Date.now()-62*864e5));
+  V.innerHTML=`<div class="box form">
+    <div style="font-size:19px;font-weight:800">🛠 打刻の修正を申告する</div>
+    <p class="note" style="margin-top:4px">打刻を忘れたとき・押しまちがえたときに、正しい時刻を送ります。管理者が確かめてから直します。</p>
+    <div class="lbl">① 日にち</div><input type="date" id="fd" min="${min}" max="${TODAY}" value="${TODAY}">
+    <div class="lbl">② 正しい時刻（わかるほうだけでよい）</div>
+    <div class="two"><label><small>出勤</small><input type="time" id="fi" step="60"></label><label><small>退勤</small><input type="time" id="fo" step="60"></label></div>
+    <div class="lbl">③ 理由</div><select id="fr">${REASONS.map(r=>`<option>${r}</option>`).join('')}</select>
+    <div class="lbl">④ ひとこと（なくてもよい）</div><textarea id="fn" rows="2" placeholder="例：退勤を押し忘れました。19:35に帰りました。"></textarea>
+    <div class="error" id="fe" hidden style="color:#C92A2A;margin-top:10px"></div>
+    <button class="big-btn" id="fs">申告する</button></div>
+    <div class="week">申告した修正</div><div id="fl"><div class="empty">読み込み中…</div></div>`;
+  $('fs').onclick=async()=>{
+    const d=$('fd').value,i=$('fi').value,o=$('fo').value;$('fe').hidden=true;
+    const err=m=>{$('fe').textContent=m;$('fe').hidden=false};
+    if(!d)return err('日にちを選んでください');
+    if(!i&&!o)return err('正しい出勤か退勤の時刻を入れてください');
+    $('fs').disabled=true;$('fs').textContent='送っています…';
+    try{await HB.sendCorrection(d,i,o,$('fr').value,$('fn').value.trim());alert('打刻の修正を申告しました。管理者の確認を待ってください。');viewFix()}
+    catch(e){err('送れませんでした（'+e.message+'）');$('fs').disabled=false;$('fs').textContent='申告する'}
+  };
+  try{
+    const [done,mine]=await Promise.all([HB.myCorrections(),HB.myCorrectionRequests()]);
+    const got=new Set(done.map(c=>c.portalId).filter(Boolean));
+    const waiting=mine.filter(r=>r.status!=='imported'&&!got.has(r.id)).map(r=>({date:r.date,newIn:r.new_in,newOut:r.new_out,reason:r.reason,status:'sent'}));
+    const list=[...waiting,...done];
+    $('fl').innerHTML=list.length?list.map(c=>{const {m,d,w}=md(c.date);return `<div class="cr"><div><b>${m}/${d}（${DOW[w]}）</b>　出 ${esc(c.newIn||'—')} ／ 退 ${esc(c.newOut||'—')}<small>${esc(c.reason||'')}</small></div><span class="st ${c.status}">${c.status==='sent'?'📨 送りました':STL[c.status]||esc(c.status||'')}</span></div>`}).join('')
+      :'<div class="empty">まだ申告はありません。</div>';
+  }catch(e){$('fl').innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`}
+}
+
+(async()=>{
+  $('loginBtn').href=LINKS.manual().replace(/#.*$/,'');
+  if(!(await HB.ready)){$('out').hidden=false;return}
+  $('in').hidden=false;
+  V.innerHTML='<div class="empty">読み込み中…</div>';
+  try{[S.me,S.my,S.team]=await Promise.all([HB.me(),HB.myDays(),HB.myTeamDays().catch(()=>[])])}
+  catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
+  const sc=[...new Map([...(S.my||[]),...(S.team||[])].map(r=>[r.scope,r.label||r.scope])).entries()];
+  S.scopes=sc;S.scope=sc.length?sc[0][0]:null;
+  $('scope').innerHTML=sc.map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('');
+  $('scope').onchange=()=>{S.scope=$('scope').value;S.month=null;show(location.hash.slice(1))};
+  show(location.hash.slice(1));
+})();
+</script>
+</body></html>

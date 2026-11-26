@@ -42,3 +42,13 @@ HB.challengeAnswer=async(qid,pick)=>HB.must(await HB.db.rpc('challenge_answer',{
 HB.signOut=async()=>{await HB.db.auth.signOut()};
 // 自分のアイコンを決める（マイページ）。シフト管理アプリが取り込んで、打刻のビー玉にも出る
 HB.setMyAvatar=async(color,icon,img)=>HB.must(await HB.db.rpc('set_my_avatar',{p_color:color,p_icon:icon||'',p_img:img||''}));
+// ── 2026-11-26 シフト管理（案A：スタッフは入口だけを使う） ──
+// みんなのシフト（自分が名簿にいる画面の分だけ）：日付→{c:1}または{s:[{l,t,n:[名前]}]}
+HB.myTeamDays=async()=>HB.must(await HB.db.rpc('my_team_days'));
+// 自分の打刻の記録（タイムカードの控えを読むだけ）：{punch:{日付:{in,out,in2,out2}}, at}
+HB.myTimecard=async()=>HB.must(await HB.db.rpc('my_timecard'));
+// 打刻の修正：受け箱に1件入れる（シフト管理アプリが取り込んで、管理者が確認する）
+HB.sendCorrection=async(date,newIn,newOut,reason,note)=>HB.must(await HB.db.from('correction_requests').insert({date,new_in:newIn||null,new_out:newOut||null,reason,note:note||null}).select('id').single());
+HB.myCorrectionRequests=async()=>HB.must(await HB.db.from('correction_requests').select('id, date, new_in, new_out, reason, status, created_at').eq('profile_id',await HB.uid()).order('created_at',{ascending:false}).limit(20));
+// 打刻修正の申告と管理者の確認の結果（シフト管理アプリの控えを読むだけ）
+HB.myCorrections=async()=>HB.must(await HB.db.rpc('my_corrections'));

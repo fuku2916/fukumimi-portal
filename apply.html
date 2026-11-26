@@ -63,7 +63,7 @@ h2{font-size:18px;margin:22px 0 8px}
 </div>
 <script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=5"></script>
+<script src="hb.js?v=6"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
@@ -71,7 +71,7 @@ const KINDS=[
  {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ',real:1},
  {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ',real:1},
  {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）'},
- {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'タイムカード（管理者が承認）'},
+ {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'シフト管理（管理者が確認）'},
 ];
 let HIST=[
  {k:'paid', d:'2026-12-26',x:'全日',st:'wait'},
@@ -141,6 +141,7 @@ function form(k){
     <div class="note" id="wkSay"></div>
     <div class="lbl">③ ひとこと（なくてもよい）</div><textarea id="memo" rows="2" placeholder="例：午後だけなら出られます"></textarea>
     <div class="note">人手が足りないときに入れる日を伝えます。必ず入るわけではなく、管理者が確認して必要なときだけシフトに入ります。</div>`;
+  if(REAL&&k==='punch'){ location.href='shift.html#fix'; return; } // 2026-11-26 案A：打刻の修正は入口の「シフト管理」から
   if(REAL&&!o.real){
     const url=k==='punch'?LINKS.timecard():LINKS.shift();
     v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>
@@ -151,7 +152,7 @@ function form(k){
   }
   v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>${body}
     <button class="submit" id="send">${REAL?'申請する':'申請する（見本）'}</button>
-    <a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>
+    ${REAL?'':`<a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>`}
     <div class="note">届け先：${o.to}</div></div>`;
   if(REAL&&k==='work') setupWork();
   if((k==='paid'||k==='off'||k==='work')&&$('d')) setupWeek();

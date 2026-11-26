@@ -114,7 +114,7 @@ showMe(PTS.total(),{icon:'🍓',color:'#DB2777'},'山田 花子');
 // 掲示板・業務マニュアル・シフト管理は、本番のアプリのその画面へ直接飛ぶ
 document.getElementById('tBoard').href=LINKS.board();
 document.getElementById('tManual').href=LINKS.manual();
-document.getElementById('tShift').href=LINKS.shift();
+document.getElementById('tShift').href='shift.html'; // 2026-11-26 案A：入口の中のシフト管理（シフト管理アプリへは飛ばない）
 // メッセージの未読数（2つの受信箱の合計）
 function showUnread(){const n=(window.REAL_UNREAD!=null?REAL_UNREAD:unreadCount()),b=document.getElementById('msgBadge');b.textContent=n;b.hidden=!n}
 showUnread(); window.addEventListener('pageshow',showUnread);
@@ -140,7 +140,7 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
 }).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=3"></script>
+<script src="hb.js?v=6"></script>
 <script>
 // ── HUKU BASE にログインしていれば、本物の名前・掲示板・メッセージの未読数を出す（読むだけ） ──
 // ログインしていなければ、見本のまま（掲示板の欄に「ログインすると本物が出ます」と添える）
