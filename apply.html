@@ -81,7 +81,11 @@ async function loadReal(){
     HIST=rows.map(r=>({k:r.type==='off'?'off':'paid',d:r.date,x:(PAID_LABEL[r.type]||'')+(r.memo?(PAID_LABEL[r.type]?'・':'')+r.memo:''),st:LST[r.status]||'sending'}));
   }catch(e){HIST=[]}
   if($('formView').hidden) home();
+  // 届けている最中の申請があれば、15秒ごとに見直す（シフト管理アプリが取り込むと「届きました」に変わる）
+  clearTimeout(loadReal.t);
+  if(HIST.some(h=>h.st==='sending')) loadReal.t=setTimeout(loadReal,15000);
 }
+document.addEventListener('visibilitychange',()=>{ if(REAL&&!document.hidden) loadReal(); });
 const $=id=>document.getElementById(id);
 const K=k=>KINDS.find(x=>x.k===k);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
