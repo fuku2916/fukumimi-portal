@@ -117,43 +117,58 @@ document.getElementById('form').addEventListener('submit',e=>{e.preventDefault()
 // iPhone では「同じ聞き取り係を使い回す」と2回目から文字が返ってこないことがあるので、毎回新しく作る。
 // また、iPhone は「確定」の合図を出さずに終わることがあるので、終わった時点で聞き取れた文字を使う。
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false, heard='', sent=false;
+let rec=null, listening=false, heard='', sent=false, gotAudio=false, guard=null;
+const say=(t,on)=>{status.className='status'+(on?' on':''); status.textContent=t};
 if(!SR){
   mic.classList.add('off');
-  mic.addEventListener('click',()=>{status.textContent='キーボードのマイク（🎤）で話して入力してください';q.focus()});
+  mic.addEventListener('click',()=>{say('キーボードのマイク（🎤）で話して入力してください');q.focus()});
 }else{
   mic.addEventListener('pointerdown',e=>e.preventDefault()); // 押したときに入力欄へカーソルが移らないように
-  mic.addEventListener('click',()=>listening?finish():start());
+  mic.addEventListener('click',()=>listening?stopNow():start());
 }
 function start(){
   q.blur(); // キーボードを閉じてから聞く（キーボードの音声入力とぶつからないように）
-  heard=''; sent=false; q.value='';
+  heard=''; sent=false; gotAudio=false; q.value='';
   rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false;
+  rec.onaudiostart=rec.onsoundstart=rec.onspeechstart=()=>{gotAudio=true};
   rec.onresult=e=>{
     if(!listening||sent) return; // 送ったあとに遅れて届く文字は使わない（入力欄に残ってしまうので）
     let t=''; for(const r of e.results) t+=r[0].transcript;
-    heard=t; q.value=t; status.textContent='● '+t;
+    heard=t; q.value=t; say('● '+t,true);
     if(e.results[e.results.length-1].isFinal) finish();
   };
   rec.onerror=e=>{
     if(e.error==='aborted') return;
-    status.className='status';
-    status.textContent=e.error==='not-allowed'?'マイクの使用が許可されていません（設定 → Safari → マイク）':
-      e.error==='no-speech'?'声が聞こえませんでした。もう一度どうぞ':'聞き取れませんでした。もう一度どうぞ';
-    listening=false; mic.classList.remove('on');
+    reset();
+    say(e.error==='not-allowed'?'マイクの使用が許可されていません（設定 → Safari → マイク）':
+        e.error==='audio-capture'?'マイクが使えません（電話中などで、ほかのアプリが使っているかもしれません）':
+        e.error==='no-speech'?'声が聞こえませんでした。もう一度どうぞ':'聞き取れませんでした。もう一度どうぞ');
   };
   rec.onend=()=>finish(true);
-  try{rec.start()}catch(_){}
   listening=true; mic.classList.add('on');
-  status.className='status on'; status.textContent='● 話してください（🎤をもう一度押すと止まります）';
+  say('● 話してください（🎤をもう一度押すと止まります）',true);
+  try{rec.start()}catch(_){reset();say('マイクを使えませんでした。もう一度どうぞ');return}
+  // 電話中などでマイクが使えないと、iPhone は何も知らせずに止まったままになるので、5秒たっても音を拾えなければやめる
+  clearTimeout(guard);
+  guard=setTimeout(()=>{if(listening&&!gotAudio&&!heard){reset();say('声が聞こえないので止めました（電話中は、マイクが使えないことがあります）')}},6000);
+}
+// 聞き取りをやめて、マイクを元の青にもどす（何も送らない）
+function reset(){
+  clearTimeout(guard); listening=false; mic.classList.remove('on');
+  if(rec){rec.onresult=rec.onend=rec.onerror=rec.onaudiostart=rec.onsoundstart=rec.onspeechstart=null; try{rec.abort()}catch(_){}}
+}
+// 赤いマイクを押したとき：聞き取れた文字があれば送る。なければ、そのまま止める
+function stopNow(){
+  if(heard.trim()&&!sent){if(rec){try{rec.stop()}catch(_){}} finish(); return}
+  reset(); say('');
 }
 function finish(ended){
   if(!listening&&ended) return;
-  listening=false; mic.classList.remove('on');
+  clearTimeout(guard); listening=false; mic.classList.remove('on');
   if(!ended&&rec){try{rec.stop()}catch(_){}}
   if(rec&&!ended) rec.onresult=null;
-  if(heard.trim()&&!sent){sent=true; status.className='status'; status.textContent=''; ask(heard)}
-  else if(!heard.trim()&&ended&&status.classList.contains('on')){status.className='status'; status.textContent='声が聞こえませんでした。もう一度どうぞ'}
+  if(heard.trim()&&!sent){sent=true; say(''); ask(heard)}
+  else if(!heard.trim()&&ended&&status.classList.contains('on')) say('声が聞こえませんでした。もう一度どうぞ');
 }
 </script>
 <script>
