@@ -205,6 +205,16 @@ function form(k){
       <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
   };
 }
+// 2026-11-26：看護師は外来を1診・2診に分けずに勤務するので、「朝外来 １診」「朝外来 ２診」は「朝外来」1つにまとめて出す
+// （名前のあるとき＝みんなのシフトは、2つの診の名前をあわせる）。朝外来・昼外来・夜外来・午前手術・午後手術 の形になる
+const roomless=l=>String(l||'').replace(/[\s　]*(?:[１２12]診|⑴|⑵)$/,'').trim();
+function mergeRooms(list){
+  const out=[],by={};
+  (list||[]).forEach(s=>{const l=roomless(s.l),k=l+'|'+(s.t||'');
+    if(!by[k]){by[k]={...s,l,n:s.n?[...s.n]:s.n};out.push(by[k]);}
+    else if(s.n){by[k].n=[...new Set([...(by[k].n||[]),...s.n])];}});
+  return out;
+}
 // 遅延証明書のファイル：写真は長い辺1600pxのJPEGに縮める（シフト管理アプリと同じ）。PDFは2.5MBまで
 function certFile(fl){
   return new Promise((ok,ng)=>{
@@ -268,7 +278,7 @@ async function setupWeek(){
       const parts=[];
       R.forEach(r=>{ const o=(r.days||{})[dk]; if(!o)return; const pre=R.length>1?esc(r.label||'')+'：':'';
         if(o.c) parts.push('<span class="off">休診</span>');
-        if(o.s) parts.push(pre+o.s.map(s=>esc(s.l)+(s.t?' <small>'+esc(s.t)+'</small>':'')).join('<br>'));
+        if(o.s) parts.push(pre+mergeRooms(o.s).map(s=>esc(s.l)+(s.t?' <small>'+esc(s.t)+'</small>':'')).join('<br>'));
         if(o.r) parts.push(REQL[o.r]||'申請あり'); });
       const txt=parts.length?parts.join('<br>'):(dk>last?'<span class="off">まだ決まっていません</span>':'<span class="off">休み</span>');
       h+=`<div class="wr${dk===d?' sel':''}"><span class="wd${w===0?' sun':w===6?' sat':''}">${x.getMonth()+1}/${x.getDate()}（${'日月火水木金土'[w]}）</span><span class="wx">${txt}</span></div>`;

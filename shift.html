@@ -79,6 +79,16 @@ const TODAY=ymd(new Date());
 const md=k=>{const d=new Date(k+'T00:00:00');return {m:d.getMonth()+1,d:d.getDate(),w:d.getDay()}};
 const wcls=w=>w===0?'sun':w===6?'sat':'';
 const REQL={paid_full:'🌸 有給',paid_am:'🌸 有給（午前）',paid_pm:'🌸 有給（午後）',off:'📅 休みの希望',work_wish:'🙋 出勤の希望'};
+// 2026-11-26：看護師は外来を1診・2診に分けずに勤務するので、「朝外来 １診」「朝外来 ２診」は「朝外来」1つにまとめて出す
+// （名前のあるとき＝みんなのシフトは、2つの診の名前をあわせる）。朝外来・昼外来・夜外来・午前手術・午後手術 の形になる
+const roomless=l=>String(l||'').replace(/[\s　]*(?:[１２12]診|⑴|⑵)$/,'').trim();
+function mergeRooms(list){
+  const out=[],by={};
+  (list||[]).forEach(s=>{const l=roomless(s.l),k=l+'|'+(s.t||'');
+    if(!by[k]){by[k]={...s,l,n:s.n?[...s.n]:s.n};out.push(by[k]);}
+    else if(s.n){by[k].n=[...new Set([...(by[k].n||[]),...s.n])];}});
+  return out;
+}
 const S={me:null,my:null,team:null,tc:null,scope:null,month:null,day:TODAY};
 
 // ── 画面の切りかえ（#my #team #tc #fix） ──
@@ -114,7 +124,7 @@ function viewMy(){
     const o=days[k],{m,d,w}=md(k);
     const mon=new Date(k+'T00:00:00');mon.setDate(mon.getDate()-((w+6)%7));const wk=ymd(mon);
     if(wk!==lastW){lastW=wk;const a=md(wk);html+=`<div class="week">${a.m}/${a.d}（月）の週</div>`}
-    const body=o.c?'<span class="off">休診</span>':(o.s||[]).map(s=>`<span class="sl"><b>${esc(s.l)}</b><span>${esc(s.t||'')}</span></span>`).join('')||'<span class="off">お休み</span>';
+    const body=o.c?'<span class="off">休診</span>':mergeRooms(o.s).map(s=>`<span class="sl"><b>${esc(s.l)}</b><span>${esc(s.t||'')}</span></span>`).join('')||'<span class="off">お休み</span>';
     html+=`<div class="day ${k===TODAY?'today':''}"><div class="d ${wcls(w)}">${m}/${d}<small>（${DOW[w]}）</small></div><div class="c">${body}${o.r?`<span class="chip">${REQL[o.r]||'申請'}</span>`:''}</div></div>`;
   });
   V.insertAdjacentHTML('beforeend',html+`<p class="note">${esc(row.label||'')}のシフトです（公開されたもの）。勤務の日だけ出ています。休み・有給の申請は「申請」から出せます。</p>`);
@@ -134,7 +144,7 @@ function viewTeam(){
     const o=days[S.day]||{},{m,d,w}=md(S.day);
     let h=`<div class="box"><div style="font-size:20px;font-weight:800" class="${wcls(w)}">${m}月${d}日（${DOW[w]}）${S.day===TODAY?' 今日':''}</div>`;
     if(o.c)h+='<p class="off" style="font-size:17px">休診です</p>';
-    else (o.s||[]).forEach(s=>{h+=`<div class="slot"><div class="h">${esc(s.l)}<span>${esc(s.t||'')}</span></div>${(s.n||[]).length?(s.n||[]).map(n=>`<span class="nm ${n.replace(/[\s　]/g,'')===myName?'me':''}">${esc(n)}</span>`).join(''):'<span class="off">（まだだれも入っていません）</span>'}</div>`});
+    else mergeRooms(o.s).forEach(s=>{h+=`<div class="slot"><div class="h">${esc(s.l)}<span>${esc(s.t||'')}</span></div>${(s.n||[]).length?(s.n||[]).map(n=>`<span class="nm ${n.replace(/[\s　]/g,'')===myName?'me':''}">${esc(n)}</span>`).join(''):'<span class="off">（まだだれも入っていません）</span>'}</div>`});
     h+=`</div><p class="note">${esc(row.label||'')}の公開されたシフトです。自分の名前は青で出ます。</p>`;
     $('dayBox').innerHTML=h;
     document.querySelectorAll('.dt').forEach(b=>b.classList.toggle('on',b.dataset.k===S.day));
@@ -160,7 +170,7 @@ async function viewBase(){
       ${b.note?`<p class="note" style="color:#92400E;font-weight:700">※ ${esc(b.note)}</p>`:''}</div>`;
     if(!b.same)h+=`<div class="two" style="margin-top:10px">${['A','B'].map(x=>`<button class="tab ${S.pat===x?'on':''}" data-p="${x}" style="font-size:15px">${x}週${x===b.today?'（今週）':x===other?'（来週）':''}</button>`).join('')}</div>`;
     let n=0;
-    DAYS.forEach(w=>{const L=W[w]||[];if(L.length)n++;
+    DAYS.forEach(w=>{const L=mergeRooms(W[w]);if(L.length)n++;
       h+=`<div class="day"><div class="d ${wcls(w)}">${DOW[w]}曜</div><div class="c">${L.length?L.map(x=>`<span class="sl"><b>${esc(x.l)}</b><span>${esc(x.t||'')}</span></span>`).join(''):'<span class="off">お休み</span>'}</div></div>`});
     h+=`<p class="note">${b.same?'':S.pat+'週は'}週${n}日の勤務です。${esc(row.label||'')}のベースシフトです。</p>`;
     V.innerHTML=h;
