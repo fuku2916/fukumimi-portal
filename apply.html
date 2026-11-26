@@ -77,7 +77,7 @@ const ST={wait:['確認待ち','wait'],okk:['承認されました','okk'],ng:['
 let REAL=false;
 const PAID={'全日':'paid_full','午前半日':'paid_am','午後半日':'paid_pm'};
 const PAID_LABEL={paid_full:'全日',paid_am:'午前半日',paid_pm:'午後半日'};
-const LST={sent:'sending',importing:'sending',imported:'arrived',duplicate:'dup',error:'ng'};
+const LST={sent:'sending',wish_sent:'sending',importing:'sending',imported:'arrived',duplicate:'dup',error:'ng'};
 async function loadReal(){
   try{
     const rows=await HB.myLeaves();
