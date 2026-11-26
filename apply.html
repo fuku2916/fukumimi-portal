@@ -26,6 +26,9 @@ h2{font-size:18px;margin:22px 0 8px}
 .lbl{font-size:16px;font-weight:700;margin:14px 0 6px}
 .form input[type=date],.form input[type=time],.form textarea{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c9ced4;border-radius:12px}
 .opts{display:flex;flex-direction:column;gap:8px}
+.trange{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;margin-bottom:8px}
+.trange input{flex:1;min-width:0}
+.trange span{width:3em}
 .opt{display:flex;align-items:center;gap:10px;font-size:18px;padding:12px 14px;border:2px solid #dde1e5;border-radius:14px;cursor:pointer}
 .opt input{width:22px;height:22px}
 .opt:has(input:checked){border-color:var(--bd);background:var(--bg2)}
@@ -51,7 +54,7 @@ h2{font-size:18px;margin:22px 0 8px}
 </div>
 <script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=3"></script>
+<script src="hb.js?v=4"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
@@ -79,7 +82,7 @@ async function loadReal(){
   try{
     const rows=await HB.myLeaves();
     HIST=rows.map(r=>{
-      const head=r.type==='work_wish'?(Array.isArray(r.slots)?r.slots.map(x=>x.label).join('・'):''):(PAID_LABEL[r.type]||'');
+      const head=r.type==='work_wish'?(r.time_from?hm(r.time_from)+'〜'+hm(r.time_to):''):(PAID_LABEL[r.type]||'');
       return {k:r.type==='off'?'off':r.type==='work_wish'?'work':'paid',d:r.date,x:head+(r.memo?(head?'・':'')+r.memo:''),st:LST[r.status]||'sending'};
     });
   }catch(e){HIST=[]}
@@ -124,7 +127,9 @@ function form(k){
     <div class="lbl">④ 理由</div><textarea id="memo" rows="2" placeholder="例：退勤を押し忘れました"></textarea>`;
   // 本番の出勤の希望：シフト管理アプリの画面と同じコマから選ぶ
   if(REAL&&k==='work') body=`<div id="wkScope"></div><div class="lbl">① 日にち</div><input type="date" id="d" min="${ymd(today)}" value="${ymd(new Date(today.getTime()+14*864e5))}">
-    <div class="lbl">② 入れるコマ（いくつでも）</div><div class="opts" id="wkSlots"><div class="note">読み込み中…</div></div>
+    <div class="lbl">② 勤務できる時間</div>
+    <div class="trange"><input type="time" id="tf" value="09:00" step="300"><span>から</span></div><div class="trange"><input type="time" id="tt" value="13:00" step="300"><span>まで</span></div>
+    <div class="note" id="wkSay"></div>
     <div class="lbl">③ ひとこと（なくてもよい）</div><textarea id="memo" rows="2" placeholder="例：午後だけなら出られます"></textarea>
     <div class="note">人手が足りないときに入れる日を伝えます。必ず入るわけではなく、管理者が確認して必要なときだけシフトに入ります。</div>`;
   if(REAL&&!o.real){
@@ -147,13 +152,15 @@ function form(k){
     if(k==='train'&&!(f&&f.files[0])){alert('遅延証明書の写真を選んでください');return}
     if(k==='punch'&&!$('memo').value.trim()){alert('理由を書いてください');return}
     if(REAL&&k==='work'){
-      const pick=[...document.querySelectorAll('input[name=wk]:checked')].map(c=>({id:c.value,label:c.dataset.l}));
-      if(!WK.cur){alert('シフトの画面が見つかりません。管理者に連絡してください');return}
-      if(!pick.length){alert('入れるコマを1つ以上えらんでください');return}
+      const tf=$('tf').value, tt=$('tt').value;
+      if(!tf||!tt){alert('勤務できる時間を入れてください');return}
+      if(tf>=tt){alert('「から」の時刻を、「まで」より前にしてください');return}
+      if(WK.closed(d)){alert('この日は休診日です。ほかの日をえらんでください');return}
+      const range=hm(tf)+'〜'+hm(tt);
       const btn=$('send'); btn.disabled=true; btn.textContent='送っています…';
-      try{ await HB.sendLeave('work_wish', d, $('memo').value.trim(), pick, WK.cur.scope); }
+      try{ await HB.sendLeave('work_wish', d, $('memo').value.trim(), null, WK.cur?WK.cur.scope:null, tf, tt); }
       catch(e){ btn.disabled=false; btn.textContent='申請する'; alert('送れませんでした：'+e.message); return; }
-      v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(pick.map(x=>x.label).join('・'))}</p>
+      v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(range)} 勤務できます</p>
         <p class="note">シフト管理アプリに届けます。届いたら、メッセージでお知らせします。<br>管理者が確認して、承認・見送りをメッセージでお知らせします。</p>
         <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
       loadReal(); return;
@@ -175,30 +182,22 @@ function form(k){
       <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
   };
 }
-// 出勤の希望：シフト管理アプリが置いたコマ一覧（自分の社員番号がいる画面の分）から選ばせる
-const WK={lists:null,cur:null};
+// 出勤の希望：勤務できる時間の幅（○時○分から○時○分まで）を書く。
+// シフト管理の画面が2つ以上（クリニック・職種）にまたがる人だけ、どこのシフトかを選ぶ
+const hm=t=>String(t||'').replace(/^0(\d)/,'$1');
+const WK={lists:null,cur:null,closed:d=>!!(WK.cur&&(WK.cur.closed||[]).includes(d))};
 async function setupWork(){
+  const say=()=>{const tf=$('tf').value, tt=$('tt').value;
+    $('wkSay').textContent=WK.closed($('d').value)?'この日は休診日です。ほかの日をえらんでください。'
+      :(tf&&tt&&tf<tt)?`「${hm(tf)}から${hm(tt)}までは勤務できます」と伝えます。`:'「から」の時刻を、「まで」より前にしてください。';};
+  ['d','tf','tt'].forEach(id=>$(id).addEventListener('input',say)); say();
   try{ if(!WK.lists) WK.lists=await HB.mySlots(); }catch(e){ WK.lists=[]; }
-  if(!$('wkSlots')) return;
-  const L=WK.lists||[];
-  if(!L.length){ $('wkSlots').innerHTML='<div class="note">シフトの画面が見つかりません。シフト管理アプリから申請するか、管理者に連絡してください。</div>'; $('send').disabled=true; return; }
-  WK.cur=L[0];
-  if(L.length>1){
+  const L=WK.lists||[]; WK.cur=L[0]||null;
+  if(L.length>1&&$('wkScope')){
     $('wkScope').innerHTML='<div class="lbl">どこのシフト</div><div class="opts">'+L.map((x,i)=>`<label class="opt"><input type="radio" name="wks" value="${i}" ${i?'':'checked'}>${esc(x.label||x.scope)}</label>`).join('')+'</div>';
-    document.querySelectorAll('input[name=wks]').forEach(r=>r.onchange=()=>{WK.cur=L[+r.value]; drawWork();});
+    document.querySelectorAll('input[name=wks]').forEach(r=>r.onchange=()=>{WK.cur=L[+r.value]; say();});
   }
-  // はじめの日：2週間後から、コマのある最初の日
-  const days=Object.keys(WK.cur.slots||{}).sort(); const want=$('d').value;
-  if(!(WK.cur.slots||{})[want]){ const n=days.find(x=>x>=want)||days[days.length-1]; if(n) $('d').value=n; }
-  if(days.length) $('d').max=days[days.length-1];
-  $('d').onchange=drawWork; drawWork();
-}
-function drawWork(){
-  const d=$('d').value, list=(WK.cur&&WK.cur.slots&&WK.cur.slots[d])||[];
-  const closed=WK.cur&&(WK.cur.closed||[]).includes(d);
-  $('wkSlots').innerHTML=list.length?list.map(s=>`<label class="opt"><input type="checkbox" name="wk" value="${esc(s.id)}" data-l="${esc(s.label)}">${esc(s.label)}<small style="margin-left:auto;font-weight:400;opacity:.7">${esc(s.time||'')}</small></label>`).join('')
-    :`<div class="note">${closed?'この日は休診日です。':'この日はえらべるコマがありません。'}ほかの日をえらんでください。</div>`;
-  $('send').disabled=!list.length;
+  if($('wkSay')) say();
 }
 function showHome(){ $('formView').hidden=true; $('home').hidden=false; home(); }
 $('kinds').addEventListener('click',e=>{const b=e.target.closest('.kind'); if(b){history.pushState({},'','#'+b.dataset.k); form(b.dataset.k)}});
