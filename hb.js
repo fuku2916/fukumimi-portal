@@ -52,3 +52,7 @@ HB.sendCorrection=async(date,newIn,newOut,reason,note)=>HB.must(await HB.db.from
 HB.myCorrectionRequests=async()=>HB.must(await HB.db.from('correction_requests').select('id, date, new_in, new_out, reason, status, created_at').eq('profile_id',await HB.uid()).order('created_at',{ascending:false}).limit(20));
 // 打刻修正の申告と管理者の確認の結果（シフト管理アプリの控えを読むだけ）
 HB.myCorrections=async()=>HB.must(await HB.db.rpc('my_corrections'));
+// 電車の遅延：遅延証明書を送る（タイムカードの「🚃 遅延証明書」にそのまま届く）。file は data URI
+HB.sendDelayCert=async(date,kind,mime,name,file)=>HB.must(await HB.db.rpc('send_delay_cert',{p_date:date,p_kind:kind,p_mime:mime,p_name:name||'',p_file:file}));
+// ベースシフト（自分の基本の勤務パターン）：[{scope,label,base:{same,today,note,A:{曜日:[{l,t}]},B:{...}}}]
+HB.myBaseShift=async()=>HB.must(await HB.db.rpc('my_base_shift'));

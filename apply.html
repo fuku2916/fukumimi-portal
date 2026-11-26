@@ -63,14 +63,14 @@ h2{font-size:18px;margin:22px 0 8px}
 </div>
 <script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=6"></script>
+<script src="hb.js?v=7"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
  {k:'paid', ic:'🌸',t:'有給休暇',     s:'全日・午前半日・午後半日',          fg:'#86198F',bg:'#FDF2F8',bd:'#D946A8',to:'シフト管理アプリ',real:1},
  {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ',real:1},
  {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ',real:1},
- {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）'},
+ {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）',real:1},
  {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'シフト管理（管理者が確認）'},
 ];
 let HIST=[
@@ -123,10 +123,10 @@ function form(k){
      <label class="opt"><input type="radio" name="x" value="午後半日">午後半日（0.5日）</label></div>`;
   if(k==='off'||k==='work') body=`<div class="lbl">① 日にち</div><input type="date" id="d" value="${ymd(new Date(today.getTime()+14*864e5))}">
     <div class="lbl">② ひとこと（なくてもよい）</div><textarea id="memo" rows="2" placeholder="${k==='off'?'例：家族の用事':'例：午後だけなら出られます'}"></textarea>`;
-  if(k==='train') body=`<div class="lbl">① 電車が遅れた日</div><input type="date" id="d" value="${ymd(today)}">
+  if(k==='train') body=`<div class="lbl">① 電車が遅れた日</div><input type="date" id="d" value="${ymd(today)}" max="${ymd(today)}" min="${ymd(new Date(today.getTime()-45*864e5))}">
     <div class="lbl">② 遅延証明書</div>
     <label class="photo" id="ph"><span style="font-size:42px">📷</span>写真をとる・えらぶ<small style="font-weight:400">駅でもらった紙、または鉄道会社のサイトの画面</small>
-     <input type="file" accept="image/*,application/pdf" capture="environment" hidden id="file"></label>
+     <input type="file" accept="image/*,application/pdf" hidden id="file"></label>
     <div class="note">送っただけでは遅刻は消えません。事務が証明書を確かめると「電車の遅延」になります。</div>`;
   if(k==='punch') body=`<div class="lbl">① 日にち</div><input type="date" id="d" value="${ymd(new Date(today.getTime()-864e5))}">
     <div class="lbl">② どの打刻</div><div class="opts">
@@ -176,6 +176,18 @@ function form(k){
         <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
       loadReal(); return;
     }
+    // 2026-11-26：電車の遅延は、遅延証明書をそのままタイムカードへ（写真は縮めてから送る）
+    if(REAL&&k==='train'){
+      const btn=$('send'); btn.disabled=true; btn.textContent='送っています…';
+      try{
+        const fl=f.files[0], c=await certFile(fl);
+        await HB.sendDelayCert(d, c.kind, c.mime, c.name, c.file);
+      }catch(e){ btn.disabled=false; btn.textContent='申請する'; alert('送れませんでした：'+e.message); return; }
+      v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>の遅延証明書を送りました<br>${md(d)}</p>
+        <p class="note">タイムカードに届きました。事務が証明書を確かめると、この日の遅刻は「電車の遅延」になり、遅刻に数えなくなります。</p>
+        <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
+      return;
+    }
     const x=(document.querySelector('input[name=x]:checked')||{}).value||'';
     const extra=k==='punch'?`${x} ${$('tm').value}`:k==='train'?'証明書を送信済み':(x||($('memo')&&$('memo').value)||'');
     if(REAL&&o.real){
@@ -192,6 +204,26 @@ function form(k){
       <p class="note">（見本なので、実際には送っていません）<br>結果はメッセージに届きます。</p>
       <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
   };
+}
+// 遅延証明書のファイル：写真は長い辺1600pxのJPEGに縮める（シフト管理アプリと同じ）。PDFは2.5MBまで
+function certFile(fl){
+  return new Promise((ok,ng)=>{
+    const rd=new FileReader();
+    rd.onerror=()=>ng(new Error('ファイルを読めませんでした'));
+    if(fl.type==='application/pdf'||/\.pdf$/i.test(fl.name||'')){
+      if(fl.size>2500000)return ng(new Error('PDFが大きすぎます（2.5MBまで）。証明書の画面のスクリーンショットを送ってください'));
+      rd.onload=()=>ok({kind:'pdf',mime:'application/pdf',name:fl.name||'certificate.pdf',file:String(rd.result).replace(/^data:[^;]*;/,'data:application/pdf;')});
+      return rd.readAsDataURL(fl);
+    }
+    rd.onload=()=>{const im=new Image();
+      im.onerror=()=>ng(new Error('写真を読めませんでした（PDFか、ふつうの写真・スクリーンショットにしてください）'));
+      im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');
+        c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        let q=0.85,u=c.toDataURL('image/jpeg',q);while(u.length>2400000&&q>0.4){q-=0.1;u=c.toDataURL('image/jpeg',q)}
+        ok({kind:'image',mime:'image/jpeg',name:(fl.name||'photo').replace(/\.[^.]+$/,'')+'.jpg',file:u})};
+      im.src=rd.result};
+    rd.readAsDataURL(fl);
+  });
 }
 // 出勤の希望：勤務できる時間の幅（○時○分から○時○分まで）を書く。
 // シフト管理の画面が2つ以上（クリニック・職種）にまたがる人だけ、どこのシフトかを選ぶ

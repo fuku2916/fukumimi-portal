@@ -4,8 +4,8 @@
 <title>シフト管理</title>
 <link rel="stylesheet" href="style.css?v=15">
 <style>
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:sticky;top:61px;z-index:2;background:var(--bg);padding:8px 0}
-.tab{font:inherit;font-size:13px;font-weight:800;border:2px solid #c9ced4;background:#fff;color:var(--ink);border-radius:14px;padding:8px 2px;cursor:pointer;line-height:1.3}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;position:sticky;top:61px;z-index:2;background:var(--bg);padding:8px 0}
+.tab{font:inherit;font-size:12px;font-weight:800;border:2px solid #c9ced4;background:#fff;color:var(--ink);border-radius:14px;padding:8px 2px;cursor:pointer;line-height:1.3}
 .tab .i{display:block;font-size:22px}
 .tab.on{border-color:#185FA5;background:#EFF6FF;color:#185FA5}
 .box{background:#fff;border-radius:18px;padding:12px 14px;margin-top:10px}
@@ -60,6 +60,7 @@
     <div class="tabs" role="tablist">
       <button class="tab" data-t="my"><span class="i">🙋</span>自分の<br>シフト</button>
       <button class="tab" data-t="team"><span class="i">👥</span>みんなの<br>シフト</button>
+      <button class="tab" data-t="base"><span class="i">🗓</span>ベース<br>シフト</button>
       <button class="tab" data-t="tc"><span class="i">⏱</span>打刻の<br>記録</button>
       <button class="tab" data-t="fix"><span class="i">🛠</span>打刻の<br>修正</button>
     </div>
@@ -69,7 +70,7 @@
 </div>
 <script src="points.js?v=2"></script><script src="me.js?v=2"></script><script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=6"></script>
+<script src="hb.js?v=7"></script>
 <script>
 const $=id=>document.getElementById(id), esc=ME.esc, V=$('view');
 const DOW='日月火水木金土';
@@ -82,11 +83,11 @@ const S={me:null,my:null,team:null,tc:null,scope:null,month:null,day:TODAY};
 
 // ── 画面の切りかえ（#my #team #tc #fix） ──
 function show(t){
-  if(!['my','team','tc','fix'].includes(t))t='my';
+  if(!['my','team','base','tc','fix'].includes(t))t='my';
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   history.replaceState(null,'','#'+t);
-  $('scope').hidden=!(t==='my'||t==='team')||!S.scopes||S.scopes.length<2;
-  ({my:viewMy,team:viewTeam,tc:viewTc,fix:viewFix})[t]();
+  $('scope').hidden=!(t==='my'||t==='team'||t==='base')||!S.scopes||S.scopes.length<2;
+  ({my:viewMy,team:viewTeam,base:viewBase,tc:viewTc,fix:viewFix})[t]();
 }
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
 
@@ -141,6 +142,31 @@ function viewTeam(){
   $('dates').onclick=e=>{const b=e.target.closest('.dt');if(b){S.day=b.dataset.k;draw()}};
   draw();
   const on=$('dates').querySelector('.dt.on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+}
+
+// ── ベースシフト（基本の勤務パターン。A週・B週） ──
+async function viewBase(){
+  V.innerHTML='<div class="empty">読み込み中…</div>';
+  try{S.base=S.base||await HB.myBaseShift()}catch(e){V.innerHTML=`<div class="empty">読み込めませんでした（${esc(e.message)}）</div>`;return}
+  const row=(S.base||[]).find(r=>r.scope===S.scope)||(S.base||[])[0];
+  if(!row||!row.base){V.innerHTML='<div class="empty">🗓<br>ベースシフトは、まだ出ていません。<br>管理者のシフト管理アプリが新しくなると、ここに出ます。</div>';return}
+  const b=row.base, other=b.today==='A'?'B':'A';
+  if(!S.pat||b.same)S.pat=b.today||'A';
+  const DAYS=[1,2,3,4,5,6];
+  const draw=()=>{
+    const p=b.same?'A':S.pat, W=b[p]||{};
+    let h=`<div class="box"><div style="font-size:18px;font-weight:800">🗓 あなたの基本の勤務パターン</div>
+      <p class="note" style="margin-top:4px">毎月のシフトは、このベースシフトをもとに、休みの希望や人の都合で調整して作られます。${b.same?'毎週同じパターンです。':'「A週」「B週」の2週で1セットになっていて、1週ごとに交互にくり返します。'}変えたいときは、管理者に相談してください。</p>
+      ${b.note?`<p class="note" style="color:#92400E;font-weight:700">※ ${esc(b.note)}</p>`:''}</div>`;
+    if(!b.same)h+=`<div class="two" style="margin-top:10px">${['A','B'].map(x=>`<button class="tab ${S.pat===x?'on':''}" data-p="${x}" style="font-size:15px">${x}週${x===b.today?'（今週）':x===other?'（来週）':''}</button>`).join('')}</div>`;
+    let n=0;
+    DAYS.forEach(w=>{const L=W[w]||[];if(L.length)n++;
+      h+=`<div class="day"><div class="d ${wcls(w)}">${DOW[w]}曜</div><div class="c">${L.length?L.map(x=>`<span class="sl"><b>${esc(x.l)}</b><span>${esc(x.t||'')}</span></span>`).join(''):'<span class="off">お休み</span>'}</div></div>`});
+    h+=`<p class="note">${b.same?'':S.pat+'週は'}週${n}日の勤務です。${esc(row.label||'')}のベースシフトです。</p>`;
+    V.innerHTML=h;
+    V.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{S.pat=x.dataset.p;draw()});
+  };
+  draw();
 }
 
 // ── 打刻の記録 ──
