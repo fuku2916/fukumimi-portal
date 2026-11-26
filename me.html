@@ -27,6 +27,25 @@
 .out-btn{background:#fff;color:#C92A2A;border:2px solid #C92A2A}
 .note{font-size:13px;color:var(--sub);line-height:1.6;margin:8px 2px 0}
 [hidden]{display:none!important}
+/* アイコンの編集 */
+.hero .av{position:relative;cursor:pointer}
+.av-edit{position:absolute;right:-2px;bottom:-2px;background:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.hero .avw{position:relative;width:96px;margin:0 auto 8px}
+.hero .avw .av{margin:0}
+.ae-bg{position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 12px}
+.ae-box{background:#fff;border-radius:20px;padding:16px;width:100%;max-width:420px}
+.ae-box h3{margin:0 0 10px;font-size:20px}
+.ae-prev{width:96px;height:96px;margin:0 auto 6px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 1px #dde1e5,0 2px 8px rgba(0,0,0,.15)}
+.ae-lbl{font-size:15px;font-weight:700;margin:14px 0 6px}
+.ae-lbl small{font-weight:400;color:var(--sub);font-size:12px}
+.ae-pal{display:flex;flex-wrap:wrap;gap:9px}
+.ae-pal button{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #c9ced4;cursor:pointer}
+.ae-pal button.on{border-color:#1f2328}
+.ae-in{font:inherit;font-size:24px;width:120px;padding:8px 12px;border:1px solid #c9ced4;border-radius:12px}
+.ae-row{display:flex;gap:8px;flex-wrap:wrap}
+.ae-sbtn{font:inherit;font-size:16px;font-weight:700;padding:10px 16px;border:2px solid #c9ced4;border-radius:12px;background:#fff;color:var(--ink);cursor:pointer}
+.error{color:#C92A2A;font-size:14px;margin-top:10px}
+.pend{font-size:12px;margin-top:6px;opacity:.95}
 </style>
 </head><body>
 <div class="top"><a class="back" href="index.html">← もどる</a><h1>マイページ</h1></div>
@@ -43,9 +62,10 @@
 
   <div id="in" hidden>
     <div class="hero" id="hero">
-      <div class="av" id="av"></div>
+      <div class="avw"><div class="av" id="av" role="button" aria-label="アイコンを変える"></div><span class="av-edit" aria-hidden="true">✏️</span></div>
       <div class="nm" id="nm"></div>
       <div class="cl" id="cl"></div>
+      <div class="pend" id="pend" hidden>新しいアイコンは、シフト管理アプリが取り込むと打刻のビー玉にも出ます</div>
       <div class="rk">現在のランク<b id="rk"></b><span id="pt"></span></div>
       <div class="nx" id="nx"></div>
     </div>
@@ -69,8 +89,8 @@
     <div class="box">
       <h3>そのほか</h3>
       <a class="big-btn sub-btn" id="pwBtn" href="#">🔑 パスワードを変える</a>
-      <a class="big-btn sub-btn" id="iconBtn" href="#">🎨 アイコンを変える</a>
-      <p class="note">アイコンは、シフト管理アプリの「打刻修正・設定」の「アイコン設定」で変えられます（打刻のビー玉と同じアイコンです）。</p>
+      <button class="big-btn sub-btn" id="iconBtn">🎨 アイコンを変える</button>
+      <p class="note">アイコンは、打刻（iPadのビー玉）とシフト管理アプリにも同じものが出ます。</p>
     </div>
 
     <button class="big-btn out-btn" id="logout">ログアウト</button>
@@ -79,14 +99,13 @@
 </div>
 <script src="points.js?v=2"></script><script src="me.js?v=1"></script><script src="links.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=2"></script>
+<script src="hb.js?v=3"></script><script src="avatar-edit.js?v=1"></script>
 <script>
 (async()=>{
   const $=id=>document.getElementById(id);
   const BASE=LINKS.manual().replace(/#.*$/,'');
   $('loginBtn').href=BASE;
   $('pwBtn').href=BASE+'#/me';
-  $('iconBtn').href=LINKS.shift();
   let x=null;
   try{x=await ME.load()}catch(e){$('loading').textContent='読み込めませんでした（'+e.message+'）';return}
   $('loading').hidden=true;
@@ -95,7 +114,11 @@
   const p=x.points,name=(x.me&&x.me.display_name)||'';
   const r=PTS.rank(p.total),nx=PTS.next(p.total);
   $('hero').style.background=r.bg;$('hero').style.color=r.fg;
-  $('av').innerHTML=ME.avatarHTML(x.avatar,name);
+  let av=x.avatar||{};
+  const showAv=()=>{$('av').innerHTML=ME.avatarHTML(av,name);$('pend').hidden=!av.pending};
+  showAv();
+  const edit=()=>AVEDIT.open(av,name,n=>{av=n;showAv();alert('アイコンを保存しました')});
+  $('av').onclick=edit;$('iconBtn').onclick=edit;
   $('nm').textContent=name+' さん';
   HB.myClinics().then(c=>{$('cl').textContent=c.length?c.join('・'):''}).catch(()=>{});
   $('rk').textContent=r.name;$('pt').textContent=p.total+'P';

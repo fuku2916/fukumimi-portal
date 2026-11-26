@@ -40,3 +40,5 @@ HB.challengeToday=async()=>HB.must(await HB.db.rpc('challenge_today'));
 HB.challengeAnswer=async(qid,pick)=>HB.must(await HB.db.rpc('challenge_answer',{qid,p_pick:pick}));
 // ログアウト（HUKU BASE もいっしょにログアウトになる）
 HB.signOut=async()=>{await HB.db.auth.signOut()};
+// 自分のアイコンを決める（マイページ）。シフト管理アプリが取り込んで、打刻のビー玉にも出る
+HB.setMyAvatar=async(color,icon,img)=>HB.must(await HB.db.rpc('set_my_avatar',{p_color:color,p_icon:icon||'',p_img:img||''}));
