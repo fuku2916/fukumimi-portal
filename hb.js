@@ -28,3 +28,15 @@ const HB=(()=>{
       .order('created_at',{ascending:false}).limit(30));
   return hb;
 })();
+// ── 2026-11-26 マイページ・ポイント・チャレンジ ──
+// ポイント（今の期間の合計とうちわけ、今日のチャレンジの残り）。ランクの基準は points.js
+HB.myPoints=async()=>HB.must(await HB.db.rpc('my_points'));
+// 自分のアイコン（シフト管理アプリの「アイコン設定」を読むだけ）：{color, icon, img}
+HB.myAvatar=async()=>HB.must(await HB.db.rpc('my_avatar'));
+// 自分の院（掲示板の所属）
+HB.myClinics=async()=>{const r=HB.must(await HB.db.rpc('my_facilities'));return (r||[]).filter(x=>x!=='全体')};
+// ポイントアップチャレンジ：今日の次の問題（答えは来ない）と、答える（答え合わせはデータベースの中）
+HB.challengeToday=async()=>HB.must(await HB.db.rpc('challenge_today'));
+HB.challengeAnswer=async(qid,pick)=>HB.must(await HB.db.rpc('challenge_answer',{qid,p_pick:pick}));
+// ログアウト（HUKU BASE もいっしょにログアウトになる）
+HB.signOut=async()=>{await HB.db.auth.signOut()};

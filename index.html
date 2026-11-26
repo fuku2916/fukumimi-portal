@@ -9,6 +9,24 @@ html.lock,html.lock body{height:100%;overflow:hidden;overscroll-behavior:none}
 html.lock body{position:fixed;inset:0;min-height:0}
 /* 天気の欄の下の地名は、はみ出して半分だけ見えるので出さない */
 .home .wplace{display:none}
+/* 右上：自分のアイコン（シフト管理アプリと同じ）・ランク・チャレンジ。背景はランクの色 */
+.home .row1{display:grid;grid-template-columns:1fr 112px;gap:10px;flex:0 0 auto;height:clamp(150px,25dvh,210px)}
+.home .row1 .board{max-height:none;height:100%}
+.home .row1 .board p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mecard{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:4px;padding:8px 6px!important;text-align:center;background:#3aa7e8;color:#fff;overflow:hidden}
+.mecard a{color:inherit;text-decoration:none}
+.av{flex:0 0 auto;width:clamp(48px,8dvh,72px);height:clamp(48px,8dvh,72px);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 3px rgba(255,255,255,.75),0 2px 6px rgba(0,0,0,.2)}
+.av-img{width:100%;height:100%;object-fit:cover}
+.av-emoji{font-size:clamp(28px,5dvh,46px);line-height:1}
+.av-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:clamp(20px,3.6dvh,32px)}
+.rk{display:block;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.rk small{display:block;font-size:11px;font-weight:700}
+.rk b{display:block;font-size:15px}
+.rk span{font-size:15px;font-weight:800}
+.chal{display:block;width:100%;background:linear-gradient(#FFE066,#F59F00);color:#7a2e00!important;font-weight:800;font-size:12px;line-height:1.25;border-radius:10px;padding:5px 2px;box-shadow:0 2px 0 #c76b00}
+.chal:active{transform:translateY(1px);box-shadow:0 1px 0 #c76b00}
+#ptsBadge{display:none}
+.home .qcard h2{margin-right:0}
 </style>
 </head><body class="home"><div class="wrap">
 
@@ -22,6 +40,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
   <button class="big-btn" id="rmApply" style="margin-top:8px;padding:10px">この内容で表示する</button>
 </div>
 
+<div class="row1">
 <a class="card board" href="page.html?p=board">
   <h2>本日の掲示板</h2>
   <div class="bbody" id="boardBody">
@@ -33,6 +52,12 @@ html.lock body{position:fixed;inset:0;min-height:0}
   </div>
   <span class="more">続きを見る ›</span>
 </a>
+<div class="card mecard" id="meCard">
+  <a class="av" id="meAv" href="me.html" aria-label="マイページ（ランク・ログアウト）"><span class="av-init" style="background:#7C3AED">山</span></a>
+  <a class="rk" href="me.html"><small>現在のランク</small><b id="meRank">ブルー</b><span id="mePts">0P</span></a>
+  <a class="chal" href="challenge.html">ポイントアップ<br>チャレンジ</a>
+</div>
+</div>
 
 <div class="row2">
   <a class="card qcard" href="quiz.html">
@@ -59,7 +84,7 @@ html.lock body{position:fixed;inset:0;min-height:0}
 </div>
 
 </div>
-<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=1"></script><script src="links.js?v=2"></script>
+<script src="real.js?v=2"></script><script src="inbox-data.js?v=2"></script><script src="points.js?v=2"></script><script src="me.js?v=1"></script><script src="links.js?v=2"></script>
 <script>
 // ── 試験用：見本のデータ／本物のデータ（Box の控え）の切り替え ──
 (()=>{
@@ -84,6 +109,11 @@ html.lock body{position:fixed;inset:0;min-height:0}
 (()=>{const n=(typeof RM!=='undefined'&&RM.me)?(RM.me.family||RM.me.name.split(/[\s　]/)[0]):'山田';
   document.getElementById('qName').textContent=n+'さんへの質問';
   const b=document.getElementById('ptsBadge');const show=()=>PTS.paint(b);show();window.addEventListener('pageshow',show)})();
+// 右上のカード：アイコン・ランク・ポイント（ログインしていなければ見本の数字）
+function showMe(p,av,name){const r=PTS.rank(p),c=document.getElementById('meCard');c.style.background=r.bg;c.style.color=r.fg;
+  document.getElementById('meRank').textContent=r.name;document.getElementById('mePts').textContent=p+'P';
+  if(av!==undefined)document.getElementById('meAv').innerHTML=ME.avatarHTML(av,name)}
+showMe(PTS.total(),{icon:'🍓'});
 // 掲示板・業務マニュアル・シフト管理は、本番のアプリのその画面へ直接飛ぶ
 document.getElementById('tBoard').href=LINKS.board();
 document.getElementById('tManual').href=LINKS.manual();
@@ -113,7 +143,7 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
 }).catch(()=>{document.getElementById('wbox').innerHTML='<div class="wrow">天気を読めません</div>'});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="hb.js?v=1"></script>
+<script src="hb.js?v=2"></script>
 <script>
 // ── HUKU BASE にログインしていれば、本物の名前・掲示板・メッセージの未読数を出す（読むだけ） ──
 // ログインしていなければ、見本のまま（掲示板の欄に「ログインすると本物が出ます」と添える）
@@ -126,6 +156,8 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${P.lat}&longitude=${P.lo
   }
   try{
     const [me,boards,unread]=await Promise.all([HB.me(),HB.boards(),HB.unreadMessages()]);
+    // 右上：自分のアイコンとランク（ポイントはデータベースのもの）
+    ME.load().then(x=>{if(!x)return;showMe(x.points.total,x.avatar,x.me&&x.me.display_name)}).catch(()=>{});
     // 名前（名字だけ）
     if(me&&me.display_name) document.getElementById('qName').textContent=me.display_name.split(/[\s　]/)[0]+'さんへの質問';
     // 掲示板：自分の院を先に、全体をあとに。それぞれ新しい2件

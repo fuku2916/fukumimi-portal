@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>マイページ</title>
+<link rel="stylesheet" href="style.css?v=14">
+<style>
+.hero{border-radius:22px;padding:18px 16px;color:#fff;text-align:center;background:#3aa7e8;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.hero .av{width:96px;height:96px;margin:0 auto 8px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 4px rgba(255,255,255,.75),0 2px 8px rgba(0,0,0,.2)}
+.av-img{width:100%;height:100%;object-fit:cover}
+.av-emoji{font-size:60px;line-height:1}
+.av-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:42px}
+.hero .nm{font-size:24px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.hero .cl{font-size:14px;opacity:.95;margin-top:2px}
+.hero .rk{margin-top:12px;font-size:15px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.hero .rk b{display:block;font-size:34px;line-height:1.2}
+.hero .nx{margin-top:6px;font-size:14px;background:rgba(255,255,255,.25);border-radius:999px;display:inline-block;padding:4px 12px}
+.box{background:#fff;border-radius:20px;padding:14px 16px;margin-top:12px}
+.box h3{margin:0 0 8px;font-size:18px}
+.kv{display:flex;justify-content:space-between;align-items:center;font-size:17px;padding:8px 0;border-top:1px solid #eef0f2}
+.kv:first-of-type{border-top:0}
+.kv b{font-size:20px}
+.ladder{display:flex;flex-direction:column;gap:6px}
+.ld{display:flex;justify-content:space-between;align-items:center;border-radius:12px;padding:8px 12px;color:#fff;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.3);opacity:.55}
+.ld.on{opacity:1;outline:3px solid #1f2328;outline-offset:1px}
+.chal-btn{background:linear-gradient(#FFE066,#F59F00);color:#7a2e00;box-shadow:0 3px 0 #c76b00}
+.sub-btn{background:#fff;color:var(--ink);border:2px solid #c9ced4}
+.out-btn{background:#fff;color:#C92A2A;border:2px solid #C92A2A}
+.note{font-size:13px;color:var(--sub);line-height:1.6;margin:8px 2px 0}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<div class="top"><a class="back" href="index.html">← もどる</a><h1>マイページ</h1></div>
+<div class="wrap">
+  <div id="loading" class="box">読み込み中…</div>
+
+  <div id="out" hidden>
+    <div class="box">
+      <h3>ログインしていません</h3>
+      <p style="margin:0;font-size:16px;line-height:1.7">HUKU BASE のIDとパスワードでログインすると、ランクやポイントが出ます。<br>はじめての人は、<b>ひらがなのフルネーム</b>と <b>0000</b> でログインしてください。</p>
+      <a class="big-btn" id="loginBtn" href="#">ログインする</a>
+    </div>
+  </div>
+
+  <div id="in" hidden>
+    <div class="hero" id="hero">
+      <div class="av" id="av"></div>
+      <div class="nm" id="nm"></div>
+      <div class="cl" id="cl"></div>
+      <div class="rk">現在のランク<b id="rk"></b><span id="pt"></span></div>
+      <div class="nx" id="nx"></div>
+    </div>
+
+    <a class="big-btn chal-btn" href="challenge.html">🏆 ポイントアップチャレンジ<br><small id="left" style="font-size:14px;font-weight:700"></small></a>
+
+    <div class="box">
+      <h3>今月のポイント <small id="period" style="font-size:13px;color:var(--sub);font-weight:400"></small></h3>
+      <div class="kv"><span>📖 お話を読んだ</span><b id="pRead">0P</b></div>
+      <div class="kv"><span>✍️ 質問に答えた</span><b id="pAns">0P</b></div>
+      <div class="kv"><span>🏆 チャレンジで正解</span><b id="pCh">0P</b></div>
+      <div class="kv"><span>合計</span><b id="pAll">0P</b></div>
+      <p class="note">お話を読むと 1P、質問に答えると 4P、チャレンジは正解1問で 3P（1日3問まで）。毎月11日に 0P からはじまります。</p>
+    </div>
+
+    <div class="box">
+      <h3>ランクの決まり</h3>
+      <div class="ladder" id="ladder"></div>
+    </div>
+
+    <div class="box">
+      <h3>そのほか</h3>
+      <a class="big-btn sub-btn" id="pwBtn" href="#">🔑 パスワードを変える</a>
+      <a class="big-btn sub-btn" id="iconBtn" href="#">🎨 アイコンを変える</a>
+      <p class="note">アイコンは、シフト管理アプリの「打刻修正・設定」の「アイコン設定」で変えられます（打刻のビー玉と同じアイコンです）。</p>
+    </div>
+
+    <button class="big-btn out-btn" id="logout">ログアウト</button>
+    <p class="note">ほかの人のIDで入り直すときは、ここでログアウトしてください（HUKU BASE もいっしょにログアウトになります）。</p>
+  </div>
+</div>
+<script src="points.js?v=2"></script><script src="me.js?v=1"></script><script src="links.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="hb.js?v=2"></script>
+<script>
+(async()=>{
+  const $=id=>document.getElementById(id);
+  const BASE=LINKS.manual().replace(/#.*$/,'');
+  $('loginBtn').href=BASE;
+  $('pwBtn').href=BASE+'#/me';
+  $('iconBtn').href=LINKS.shift();
+  let x=null;
+  try{x=await ME.load()}catch(e){$('loading').textContent='読み込めませんでした（'+e.message+'）';return}
+  $('loading').hidden=true;
+  if(!x){$('out').hidden=false;return}
+  $('in').hidden=false;
+  const p=x.points,name=(x.me&&x.me.display_name)||'';
+  const r=PTS.rank(p.total),nx=PTS.next(p.total);
+  $('hero').style.background=r.bg;$('hero').style.color=r.fg;
+  $('av').innerHTML=ME.avatarHTML(x.avatar,name);
+  $('nm').textContent=name+' さん';
+  HB.myClinics().then(c=>{$('cl').textContent=c.length?c.join('・'):''}).catch(()=>{});
+  $('rk').textContent=r.name;$('pt').textContent=p.total+'P';
+  $('nx').textContent=nx?`あと ${nx.need}P で${nx.name}`:'いちばん上のランクです！';
+  const md=s=>{const d=new Date(s+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()};
+  $('period').textContent=`（${md(p.start)}〜${md(p.end)}）`;
+  $('pRead').textContent=p.read+'P';$('pAns').textContent=p.ans+'P';$('pCh').textContent=p.challenge+'P';$('pAll').textContent=p.total+'P';
+  $('left').textContent=p.challenge_left>0?`今日はあと ${p.challenge_left} 問`:'今日の3問はおわりました';
+  $('ladder').innerHTML=PTS.RANKS.slice().reverse().map((k,i,a)=>{
+    const hi=a[i+1]?a[i+1].min:null;
+    const rng=k.min<0?`${hi}Pまで`:hi!=null?`${k.min+1}〜${hi}P`:`${k.min+1}P から`;
+    return `<div class="ld ${k.name===r.name?'on':''}" style="background:${k.bg}"><span>${k.name}</span><span>${rng}</span></div>`}).join('');
+  $('logout').onclick=async()=>{
+    if(!confirm('ログアウトします。よろしいですか？'))return;
+    $('logout').disabled=true;$('logout').textContent='ログアウトしています…';
+    try{await HB.signOut()}catch(e){}
+    location.href=BASE;   // HUKU BASE のログイン画面へ
+  };
+})();
+</script>
+</body></html>

@@ -1,12 +1,13 @@
-// ポイント制（見本）：お話を読んだら 1P、質問に答えたら 4P（1日 最大 5P）。
+// ポイント制：お話を読んだら 1P、質問に答えたら 4P、ポイントアップチャレンジは正解1問 3P（1日3問まで）。1日 最大 14P。
+// 2026-11-26：HUKU BASE にログインしていれば、ポイントはデータベース（my_points）のものを使う（me.js）。ランクの基準は 50/120/200/250。
 // 集計期間は毎月11日〜翌月10日（給与の締めと同じ）。期間が変わると 0P から。
 // 見本ではこの端末の中（localStorage）だけに記録する。本番はクラウドに1日1行で記録する予定。
 const PTS=(()=>{
   const RANKS=[ // 「〜を超えたら」
-    {min:100,name:'プラチナ',bg:'linear-gradient(135deg,#8E9EB5,#C9D3E3 45%,#7D8BA3)',fg:'#fff'},
-    {min:80, name:'ゴールド',bg:'linear-gradient(135deg,#C9A227,#F2D46B 45%,#B8901A)',fg:'#fff'},
-    {min:50, name:'シルバー',bg:'linear-gradient(135deg,#8F969E,#D3D7DB 45%,#858C94)',fg:'#fff'},
-    {min:20, name:'ブロンズ',bg:'linear-gradient(135deg,#A0612D,#D9955A 45%,#8E5426)',fg:'#fff'},
+    {min:250,name:'プラチナ',bg:'linear-gradient(135deg,#8E9EB5,#C9D3E3 45%,#7D8BA3)',fg:'#fff'},
+    {min:200,name:'ゴールド',bg:'linear-gradient(135deg,#C9A227,#F2D46B 45%,#B8901A)',fg:'#fff'},
+    {min:120,name:'シルバー',bg:'linear-gradient(135deg,#8F969E,#D3D7DB 45%,#858C94)',fg:'#fff'},
+    {min:50, name:'ブロンズ',bg:'linear-gradient(135deg,#A0612D,#D9955A 45%,#8E5426)',fg:'#fff'},
     {min:-1, name:'ブルー',  bg:'#3aa7e8',fg:'#fff'},
   ];
   const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
