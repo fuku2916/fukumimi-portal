@@ -49,12 +49,14 @@ h2{font-size:18px;margin:22px 0 8px}
   </div>
   <div id="formView" hidden></div>
 </div>
-<script src="links.js?v=1"></script>
+<script src="links.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="hb.js?v=2"></script>
 <script>
 // 色はシフト管理アプリの REQ_TYPES と同じ（いまの色のまま、の方針）
 const KINDS=[
- {k:'paid', ic:'🌸',t:'有給休暇',     s:'全日・午前半日・午後半日',          fg:'#86198F',bg:'#FDF2F8',bd:'#D946A8',to:'シフト管理アプリ'},
- {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ'},
+ {k:'paid', ic:'🌸',t:'有給休暇',     s:'全日・午前半日・午後半日',          fg:'#86198F',bg:'#FDF2F8',bd:'#D946A8',to:'シフト管理アプリ',real:1},
+ {k:'off',  ic:'📅',t:'休みの希望',   s:'シフトを作る前に、休みたい日を伝える', fg:'#C2410C',bg:'#FFF7ED',bd:'#F97316',to:'シフト管理アプリ',real:1},
  {k:'work', ic:'🙋',t:'出勤の希望',   s:'この日は出られます、を伝える',        fg:'#065F46',bg:'#ECFDF5',bd:'#10B981',to:'シフト管理アプリ'},
  {k:'train',ic:'🚃',t:'電車の遅延',   s:'遅延証明書の写真を送る',             fg:'#185FA5',bg:'#EFF6FF',bd:'#60A5FA',to:'タイムカード（事務が確認）'},
  {k:'punch',ic:'🕒',t:'打刻の修正',   s:'押し忘れ・押しまちがい',              fg:'#5B6470',bg:'#F3F4F6',bd:'#9CA3AF',to:'タイムカード（管理者が承認）'},
@@ -65,7 +67,21 @@ let HIST=[
  {k:'off',  d:'2026-12-13',x:'',st:'okk'},
  {k:'punch',d:'2026-11-10',x:'退勤 18:45 → 19:10',st:'ng'},
 ];
-const ST={wait:['確認待ち','wait'],okk:['承認されました','okk'],ng:['差し戻し','ng']};
+const ST={wait:['確認待ち','wait'],okk:['承認されました','okk'],ng:['差し戻し','ng'],
+  sending:['届けています','wait'],arrived:['届きました','okk'],dup:['申請済みの日','ng']};
+// ── 本番：HUKU BASE にログインしていれば、有給・休みの希望は本当に出す（シフト管理アプリが取り込む）──
+// ほかの3つ（出勤の希望・電車の遅延・打刻の修正）は、今はシフト管理アプリ・タイムカードから出す
+let REAL=false;
+const PAID={'全日':'paid_full','午前半日':'paid_am','午後半日':'paid_pm'};
+const PAID_LABEL={paid_full:'全日',paid_am:'午前半日',paid_pm:'午後半日'};
+const LST={sent:'sending',importing:'sending',imported:'arrived',duplicate:'dup',error:'ng'};
+async function loadReal(){
+  try{
+    const rows=await HB.myLeaves();
+    HIST=rows.map(r=>({k:r.type==='off'?'off':'paid',d:r.date,x:(PAID_LABEL[r.type]||'')+(r.memo?(PAID_LABEL[r.type]?'・':'')+r.memo:''),st:LST[r.status]||'sending'}));
+  }catch(e){HIST=[]}
+  if($('formView').hidden) home();
+}
 const $=id=>document.getElementById(id);
 const K=k=>KINDS.find(x=>x.k===k);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -99,18 +115,35 @@ function form(k){
      <label class="opt"><input type="radio" name="x" value="退勤">退勤</label></div>
     <div class="lbl">③ 正しい時刻</div><input type="time" id="tm" value="18:45">
     <div class="lbl">④ 理由</div><textarea id="memo" rows="2" placeholder="例：退勤を押し忘れました"></textarea>`;
+  if(REAL&&!o.real){
+    const url=k==='punch'?LINKS.timecard():LINKS.shift();
+    v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>
+      <p style="font-size:17px;line-height:1.7">この申請は、いまは<b>${k==='punch'?'タイムカード':'シフト管理アプリ'}</b>から出してください。<br>（入口から出せるようにする準備をしています）</p>
+      <a class="submit" style="display:block;text-align:center;text-decoration:none" href="${url}">${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く</a>
+      <div class="note">届け先：${o.to}</div></div>`;
+    return;
+  }
   v.innerHTML=`<div class="form"><div class="head"><span style="font-size:36px">${o.ic}</span>${o.t}</div>${body}
-    <button class="submit" id="send">申請する（見本）</button>
+    <button class="submit" id="send">${REAL?'申請する':'申請する（見本）'}</button>
     <a class="submit" style="display:block;text-align:center;text-decoration:none;background:#fff;color:var(--fg);border:2px solid var(--bd)" href="${k==='punch'?LINKS.timecard():LINKS.shift()}">いまの方法で申請する（${k==='punch'?'タイムカード':'シフト管理アプリ'}を開く）</a>
     <div class="note">届け先：${o.to}</div></div>`;
   const f=$('file'); if(f) f.onchange=()=>{const x=f.files[0]; if(!x)return;
     $('ph').innerHTML=(x.type.startsWith('image/')?`<img src="${URL.createObjectURL(x)}">`:'📄 '+esc(x.name))+'<small style="font-weight:400">押すと撮り直せます</small>'; $('ph').appendChild(f);};
-  $('send').onclick=()=>{
+  $('send').onclick=async()=>{
     const d=$('d').value; if(!d){alert('日にちを選んでください');return}
     if(k==='train'&&!(f&&f.files[0])){alert('遅延証明書の写真を選んでください');return}
     if(k==='punch'&&!$('memo').value.trim()){alert('理由を書いてください');return}
     const x=(document.querySelector('input[name=x]:checked')||{}).value||'';
     const extra=k==='punch'?`${x} ${$('tm').value}`:k==='train'?'証明書を送信済み':(x||($('memo')&&$('memo').value)||'');
+    if(REAL&&o.real){
+      const btn=$('send'); btn.disabled=true; btn.textContent='送っています…';
+      try{ await HB.sendLeave(k==='paid'?PAID[x]:'off', d, k==='off'?$('memo').value.trim():''); }
+      catch(e){ btn.disabled=false; btn.textContent='申請する'; alert('送れませんでした：'+e.message); return; }
+      v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(extra)}</p>
+        <p class="note">シフト管理アプリに届けます。届いたら、メッセージでお知らせします。<br>管理者が確認して、シフトに入れます。</p>
+        <button class="submit" onclick="history.back()">申請の一覧にもどる</button></div>`;
+      loadReal(); return;
+    }
     HIST.unshift({k,d,x:extra,st:'wait'});
     v.innerHTML=`<div class="form done"><div class="big">✅</div><p><b>${o.t}</b>を申請しました<br>${md(d)}　${esc(extra)}</p>
       <p class="note">（見本なので、実際には送っていません）<br>結果はメッセージに届きます。</p>
@@ -122,6 +155,13 @@ $('kinds').addEventListener('click',e=>{const b=e.target.closest('.kind'); if(b)
 $('back').addEventListener('click',e=>{if(!$('formView').hidden){e.preventDefault();history.back()}});
 window.addEventListener('popstate',()=>{const k=location.hash.slice(1); K(k)?form(k):showHome()});
 K(location.hash.slice(1))?form(location.hash.slice(1)):home();
+HB.ready.then(ok=>{ if(!ok) return;
+  REAL=true;
+  document.querySelector('.mockbar').hidden=true;
+  document.querySelector('.pl').style.display='none'; // 有給の残りは、いまはシフト管理アプリで確認
+  HIST=[]; loadReal();
+  if(!$('formView').hidden) form(location.hash.slice(1));
+});
 </script>
 <script src="fresh.js?v=1"></script>
 </body></html>
