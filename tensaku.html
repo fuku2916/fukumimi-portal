@@ -89,10 +89,11 @@ const NUM = '①②③④';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
 const ls = { get(k){ try { return localStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { localStorage.setItem('tensaku_'+k, v) } catch(e){} } };
 const ss = { get(k){ try { return sessionStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { sessionStorage.setItem('tensaku_'+k, v) } catch(e){} } };
-const S = { code: PREVIEW ? ss.get('admin') : ls.get('code'), name: ls.get('name'), job: ls.get('job'), names: [], qs: [], queue: [], cur: null, photos: {}, pvi: 0, pvf: '' };
+const S = { code: PREVIEW ? ss.get('admin') : ls.get('code'), name: ls.get('name').replace(/[\s\u3000]+/g, ''), job: ls.get('job'), names: [], qs: [], queue: [], cur: null, photos: {}, pvi: 0, pvf: '' };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = $('#app');
+function normName(v){ return String(v || '').replace(/[\s\u3000]+/g, '').replace(/[\u30A1-\u30F6]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60)) }
 function hash(s){ let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) } return h >>> 0 }
 // 選択肢の並び（本番と同じく順番をまぜる。問題ごとに決まった順）
 function order(q){ const idx = [0,1,2,3]; let h = hash(q.id); for (let i = 3; i > 0; i--) { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; const j = h % (i+1); [idx[i], idx[j]] = [idx[j], idx[i]] } return idx }
@@ -105,32 +106,31 @@ function startView(msg){
     <div>スタッフが毎日スマホで答える問題の、見直しをお願いします。本番と同じ画面で1問ずつ答えてみて、スタッフに出したほうがよいか、意見を書いてください。</div>
     <label class="t" for="code">① 合言葉</label>
     <input type="text" id="code" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(S.code)}" placeholder="お知らせした合言葉">
-    <div id="who" ${S.names.length ? '' : 'hidden'}>
+    <div id="who" ${S.ok ? '' : 'hidden'}>
       <label class="t" for="name">② お名前</label>
-      <select id="name"><option value="">えらんでください</option>${S.names.map((n) => `<option ${n === S.name ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="__other">一覧にない（書きこむ）</option></select>
-      <input type="text" id="name2" placeholder="お名前（フルネーム）" hidden style="margin-top:8px">
+      <div style="font-size:.95rem;margin-bottom:6px">ひらがなでフルネームを入れてください。</div>
+      <input type="text" id="name" autocomplete="off" value="${esc(S.name)}" placeholder="例：ふくみみ はなこ">
       <label class="t">③ 職種</label>
       <div class="jobs">${Object.entries(JOBS).map(([k, v]) => `<button class="job ${S.job === k ? 'on' : ''}" data-job="${k}">${k}<small>${v}</small></button>`).join('')}</div>
     </div>
     <div class="err" id="err">${esc(msg || '')}</div>
-    <button class="btn" id="go">${S.names.length ? '添削をはじめる' : 'つぎへ'}</button>
+    <button class="btn" id="go">${S.ok ? '添削をはじめる' : 'つぎへ'}</button>
   </div>`;
-  const sel = $('#name');
-  sel.onchange = () => { $('#name2').hidden = sel.value !== '__other' };
-  if (S.name && S.names.length && !S.names.includes(S.name)) { sel.value = '__other'; $('#name2').hidden = false; $('#name2').value = S.name }
   app.querySelectorAll('.job').forEach((b) => b.onclick = () => { S.job = b.dataset.job; app.querySelectorAll('.job').forEach((x) => x.classList.toggle('on', x === b)) });
   $('#go').onclick = async () => {
     const code = $('#code').value.trim();
     $('#go').disabled = true; $('#err').textContent = '';
-    if (!S.names.length || code !== S.code) {
+    if (!S.ok || code !== S.code) {
       const { data, error } = await db.rpc('qr_start', { p_code: code });
       $('#go').disabled = false;
       if (error) { $('#err').textContent = error.message.includes('合言葉') ? '合言葉がちがいます。もう一度たしかめてください。' : '通信できませんでした。電波のよいところで、もう一度押してください。'; return }
-      S.code = code; ls.set('code', code); S.names = data.names || []; startView(); return
+      S.code = code; ls.set('code', code); S.ok = true; startView(); return
     }
-    const nm = sel.value === '__other' ? $('#name2').value.trim() : sel.value;
+    // スペース（全角・半角）は無視し、カタカナはひらがなにそろえる
+    const nm = normName($('#name').value);
     $('#go').disabled = false;
-    if (!nm) { $('#err').textContent = 'お名前をえらんでください。'; return }
+    if (!nm) { $('#err').textContent = 'お名前を、ひらがなでフルネームで入れてください。'; return }
+    if (!/^[\u3041-\u309Fー]+$/.test(nm)) { $('#err').textContent = 'お名前は、ひらがなで入れてください（漢字やローマ字は使えません）。'; return }
     if (!S.job) { $('#err').textContent = '職種をえらんでください。'; return }
     S.name = nm; ls.set('name', nm); ls.set('job', S.job);
     await load();
@@ -139,7 +139,7 @@ function startView(msg){
 async function load(){
   app.innerHTML = '<div class="box">問題を読みこんでいます…</div>';
   const { data, error } = await db.rpc('qr_list', { p_code: S.code, p_job: S.job, p_reviewer: S.name });
-  if (error) { S.names = []; return startView(error.message.includes('合言葉') ? '合言葉が変わりました。もう一度入れてください。' : '通信できませんでした。もう一度押してください。') }
+  if (error) { S.ok = false; return startView(error.message.includes('合言葉') ? '合言葉が変わりました。もう一度入れてください。' : '通信できませんでした。もう一度押してください。') }
   S.qs = data; S.skip = [];
   next();
 }
@@ -166,7 +166,7 @@ function header(){
   }
   return `<div><div class="bar"><span class="who">${esc(S.name)}・${esc(S.job)}</span></div>
   <div class="box" id="progbox" style="padding:10px 14px;margin-top:8px">${progHTML()}</div>
-  <div class="tools"><button onclick="listView()">📋 答えた問題を見直す</button><button onclick="S.names=[];startView()">名前・職種を変える</button></div></div>`;
+  <div class="tools"><button onclick="listView()">📋 答えた問題を見直す</button><button onclick="S.ok=false;startView()">名前・職種を変える</button></div></div>`;
 }
 // つぎの問題はサーバーが決める：まだ誰も答えていない問題 → 答えが少ない問題。ほかの人に出している最中の問題はあとに回す
 async function next(){
