@@ -93,7 +93,7 @@ function draw(){
   const cantQ = Q.filter((q) => (by[q.id] || []).some((a) => a.picked === -1)).length;
 
   $('#main').innerHTML = `
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" onclick="go(CODE)">🔄 最新にする</button><button class="btn ghost" onclick="csv()">⬇ 回答をCSVで保存</button><span style="color:var(--sub);font-size:13px;align-self:center">${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 時点</span></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" onclick="go(CODE)">🔄 最新にする</button><button class="btn ghost" onclick="csv()">⬇ 回答をCSVで保存</button><a class="btn ghost" style="text-decoration:none" href="tensaku.html?preview">👀 スタッフの画面で見る</a><span style="color:var(--sub);font-size:13px;align-self:center">${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 時点</span></div>
   <div class="kpis">
     <div class="kpi"><div class="l">回答率（1人以上が見た問題）</div><div class="v">${pct}%</div><div class="s">${seen} / ${Q.length}問</div><div class="bar"><i style="width:${pct}%"></i></div></div>
     <div class="kpi"><div class="l">回答の数</div><div class="v">${A.length}</div><div class="s">${ppl.length}人が回答</div></div>
@@ -133,6 +133,7 @@ function list(by){
     return `<div class="q"><div class="tg">No.${q.no}　${esc(q.target)}向け　${esc(q.clinic || '')}　${esc(q.area || '')}　回答${a.length}人</div>
       <div class="qt">${esc(q.question)}</div>
       <div class="ok">正解：${esc(q.choices[0])}</div>
+      <a href="tensaku.html?preview#no=${q.no}" style="font-size:14px;font-weight:700;color:#1c64b0">👀 スタッフの画面で見る</a>
       <details><summary>ほかの選択肢・解説・写真</summary><div style="font-size:15px">②${esc(q.choices[1])}　③${esc(q.choices[2])}　④${esc(q.choices[3])}</div><div style="font-size:15px;margin-top:4px">${esc(q.explanation)}</div>${q.memo ? `<div style="font-size:14px;color:var(--amber);margin-top:4px">作成メモ：${esc(q.memo)}</div>` : ''}<div style="font-size:13px;color:var(--sub)">${esc(q.source || '')}</div>${q.hasPhoto ? `<div class="ph" data-id="${q.id}"><button class="btn ghost" style="margin-top:6px" onclick="photo(this)">写真を見る</button></div>` : ''}</details>
       ${a.map((x) => `<div class="a"><b>${esc(x.reviewer)}</b><span style="color:var(--sub);font-size:13px">${esc(x.job)}・${jp(x.at)}</span><br>${pickPill(x.picked)}${vPill(x.verdict)}${x.comment ? `<div class="cm">${esc(x.comment)}</div>` : ''}</div>`).join('')}
     </div>`;
@@ -141,8 +142,8 @@ function list(by){
 }
 async function photo(b){
   const box = b.parentElement; b.textContent = '読みこみ中…';
-  const { data } = await db.rpc('qr_photo', { p_code: CODE, p_qid: box.dataset.id });
-  box.innerHTML = data ? `<img src="${data}" alt="">` : '写真を読みこめませんでした';
+  const { data } = await db.rpc('qr_photo2', { p_code: CODE, p_qid: box.dataset.id });
+  box.innerHTML = data?.photo ? `<img src="${data.photo}" alt="" style="max-height:420px">${data.full ? `<div style="font-size:13px;color:var(--sub)">押したときに出る全体の写真：</div><img src="${data.full}" alt="" style="max-height:420px">` : ''}` : '写真を読みこめませんでした';
 }
 function csv(){
   const qm = Object.fromEntries(D.questions.map((q) => [q.id, q]));
