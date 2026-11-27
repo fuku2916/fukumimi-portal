@@ -91,9 +91,10 @@ textarea::placeholder{color:#9aa3a0}
 <script>
 const db = supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3R3Ym56ampkbGxxc21sdnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzkzMDQsImV4cCI6MjA5NjQ1NTMwNH0.quP2UmR59c1ULUgZkqaq0kzeD8VlOY3cKH4ZaZJwtf0', {auth:{persistSession:false}});
 const PH = '回答できない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。\n\nほかにも、まちがい・当院のやり方とちがうところ・わかりにくい言葉などがあれば、書いてください。';
-const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師', '医師': '記述式の質問'};
+const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師', '医師': '問題と解説の確認'};
 const PH_OPEN = 'ここに答えを書いてください（箇条書きで大丈夫です）。\n\n答えられない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。';
 const PH_AI = '直すところを書いてください（箇条書きで大丈夫です）。\n例：「3つ目の目安は48時間ではなく24時間」「〇〇の説明が足りない」\n\n「（当院の決まりを書き入れてください）」のところは、わかる範囲で書いてください。\n質問の意味がわからない場合は、その理由を書いてください。';
+const PH_DOC = '医学的にまちがっているところ、当院のやり方とちがうところ、問題の意味がわかりにくいところがあれば書いてください。\n例：「状況によっては③も正しいので、選択肢を直した方がよい」「解説の〇〇は△△の方が正確」\n\n答えられない場合は、その理由を書いてください。';
 const AI_NOTE = 'この回答はAIで作成しました。医学的に間違えているところや、質問の意味が不明瞭なところがあれば教えてください。';
 const NUM = '①②③④';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
@@ -208,7 +209,7 @@ function card(q, picked){
   const rightPos = ord.indexOf(0);
   const t = srcTitle(q);
   return `<article class="q">
-    <header class="qh"><span class="no">No.${q.no}</span><span class="tag">${esc(q.target)}</span><span class="tag">${esc(clinic)}</span>${q.area ? `<span class="tag soft">${esc(q.area)}</span>` : ''}</header>
+    <header class="qh"><span class="no">No.${q.no}</span>${q.target === '医師' ? `<span class="tag">医師の確認用</span>${q.aim ? `<span class="tag">本番は${esc(q.aim)}向け</span>` : ''}` : `<span class="tag">${esc(q.target)}</span>`}<span class="tag">${esc(clinic)}</span>${q.area ? `<span class="tag soft">${esc(q.area)}</span>` : ''}</header>
     ${q.hasPhoto ? `<figure class="ph" id="ph"><div class="wait">写真を読みこみ中…</div><figcaption>${t && /動画/.test(q.source || '') ? `手順書「${esc(t)}」の写真　` : ''}押すと写真の全体が大きく見られます</figcaption></figure>` : ''}
     <p class="qt">${esc(q.question)}</p>
     <div class="chs">${ord.map((i, k) => `<button class="ch ${shown ? (i === 0 ? 'right' : i === picked ? 'wrong' : '') : ''}" ${shown ? 'disabled' : ''} onclick="pick(${i})" type="button"><span class="n">${NUM[k]}</span><span>${esc(q.choices[i])}</span></button>`).join('')}</div>
@@ -253,6 +254,7 @@ function render(){
   app.innerHTML = header() + card(q, picked) + `<section class="rv">
     <div class="hd">✏️ ここから下は添削用です（本番の画面には出ません）</div>
     ${shown ? `
+      ${q.target === '医師' ? `<div class="ainote">この問題と解説はAIで作成しました。医学的に間違えているところや、問題の意味が不明瞭なところがあれば教えてください。</div>` : ''}
       ${q.memo ? `<div class="memo"><b>作った人が、確かめてほしいこと</b>${esc(q.memo)}</div>` : ''}
       <div class="step">この問題を、スタッフに出すことについて</div>
       <div class="vd">
@@ -260,12 +262,12 @@ function render(){
         <button class="v r ${verdict === 'reject' ? 'on' : ''}" onclick="setV('reject')">👎 不採用にした方が良いと思う</button>
       </div>
       <div class="step">意見・理由</div>
-      <textarea id="cm" placeholder="${esc(PH)}">${esc(comment)}</textarea>
+      <textarea id="cm" placeholder="${esc(q.target === '医師' ? PH_DOC : PH)}">${esc(comment)}</textarea>
       <div class="err" id="err"></div>
       <button class="btn" id="save" onclick="save()">${PREVIEW ? 'つぎの問題へ（確認画面なので保存しません）' : edit ? '直して保存する' : '保存して、つぎの問題へ'}</button>`
     : `<div style="font-size:.95rem;margin-top:6px">まず上の問題に答えてください。答えると、正解と解説、意見を書く欄が出ます。</div>
        <button class="cant" onclick="pick(-1)">わからない・答えられない</button>
-       <textarea id="cm" placeholder="${esc(PH)}">${esc(comment)}</textarea>`}
+       <textarea id="cm" placeholder="${esc(q.target === '医師' ? PH_DOC : PH)}">${esc(comment)}</textarea>`}
     ${PREVIEW ? '' : edit ? `<button class="btn ghost" onclick="listView()">直さずに一覧へもどる</button>` : `<button class="btn ghost" onclick="skip()">この問題はあとで（とばす）</button>`}
   </section>`;
   const cm = $('#cm'); if (cm) cm.oninput = () => { S.cur.comment = cm.value };
