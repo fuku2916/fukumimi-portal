@@ -89,7 +89,7 @@ textarea::placeholder{color:#9aa3a0}
 const db = supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3R3Ym56ampkbGxxc21sdnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzkzMDQsImV4cCI6MjA5NjQ1NTMwNH0.quP2UmR59c1ULUgZkqaq0kzeD8VlOY3cKH4ZaZJwtf0', {auth:{persistSession:false}});
 const PH = '回答できない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。\n\nほかにも、まちがい・当院のやり方とちがうところ・わかりにくい言葉などがあれば、書いてください。';
 const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師', '医師': '記述式の質問'};
-const PH_OPEN = 'ここに答えを書いてください（箇条書きで大丈夫です）。\n\n答えられない場合は、この欄に、『出題の意図がわからないので回答できない』『当院では決まっていないので院長と相談が必要』など、その理由を書いてください。';
+const PH_OPEN = 'ここに答えを書いてください（箇条書きで大丈夫です）。\n\n答えられない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。';
 const NUM = '①②③④';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
 const ls = { get(k){ try { return localStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { localStorage.setItem('tensaku_'+k, v) } catch(e){} } };
