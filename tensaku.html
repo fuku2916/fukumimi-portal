@@ -32,6 +32,7 @@ textarea::placeholder{color:#9aa3a0}
 .bar .who{font-size:16px}.bar .cnt{font-size:15px;white-space:nowrap}
 .bar.pv{background:#7a5300}
 .prog{height:8px;background:#fff;border-radius:4px;margin-top:8px;overflow:hidden}.prog i{display:block;height:100%;background:#3fb27f}
+.pj{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin-top:4px}.pjl{width:4.5em}.pjb{flex:1;height:10px;background:#e3ece6;border-radius:5px;overflow:hidden}.pjb i{display:block;height:100%;background:#3fb27f}.pjv{width:3em;text-align:right}
 .progt{font-size:14px;color:var(--sub);margin-top:4px}
 .tools{display:flex;gap:8px;margin-top:8px}.tools button,.tools select,.tools input{flex:1;font:inherit;font-size:14px;font-weight:700;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:7px 8px;color:var(--fg);cursor:pointer;min-width:0}
 /* ---- 本番と同じ問題カード ---- */
@@ -139,27 +140,42 @@ async function load(){
   app.innerHTML = '<div class="box">問題を読みこんでいます…</div>';
   const { data, error } = await db.rpc('qr_list', { p_code: S.code, p_job: S.job, p_reviewer: S.name });
   if (error) { S.names = []; return startView(error.message.includes('合言葉') ? '合言葉が変わりました。もう一度入れてください。' : '通信できませんでした。もう一度押してください。') }
-  S.qs = data;
-  // 自分がまだ答えていない問題を、みんなの回答が少ない順に（同じ数なら人ごとにちがう順番で）
-  S.queue = S.qs.filter((q) => !q.mine).sort((a, b) => (a.n - b.n) || (hash(S.name + a.id) - hash(S.name + b.id)));
+  S.qs = data; S.skip = [];
   next();
+}
+// 職種ごとの到達率（その職種の問題のうち、だれか1人でも答えた問題の割合）
+async function loadProgress(){
+  const { data } = await db.rpc('qr_progress', { p_code: S.code });
+  if (data) { S.progress = data; const el = $('#progbox'); if (el) el.innerHTML = progHTML() }
+}
+function progHTML(){
+  const P = S.progress || {};
+  return `<div class="progt" style="margin-top:0">みんなの到達率</div>` + ['クラーク', 'ナース'].map((j) => {
+    const p = P[j] || { all: 0, seen: 0 }, pct = p.all ? Math.round(p.seen / p.all * 100) : 0;
+    return `<div class="pj"><span class="pjl">${j}</span><span class="pjb"><i style="width:${pct}%"></i></span><span class="pjv">${pct}%</span></div>`;
+  }).join('');
 }
 function header(){
   if (PREVIEW) {
     const list = pvList();
     return `<div class="bar pv"><span class="who">👀 スタッフの画面の確認（先生用）</span><span class="cnt">${list.length ? S.pvi + 1 : 0} / ${list.length}問</span></div>
     <div class="progt">スタッフと同じ画面です。答えたり意見を書いたりしても、保存されません。</div>
+    <div class="box" id="progbox" style="padding:10px 14px;margin-top:8px">${progHTML()}</div>
     <div class="tools"><button onclick="pvGo(-1)">◀ まえ</button><input id="pvno" type="text" inputmode="numeric" placeholder="No.で開く" onchange="pvJump(this.value)"><button onclick="pvGo(1)">つぎ ▶</button></div>
     <div class="tools"><select onchange="S.pvf=this.value;S.pvi=0;pvShow()">${[['', 'すべて（500問）'], ['クラーク', 'クラーク向け'], ['ナース', 'ナース向け'], ['クラーク・ナース', '両方向け'], ['photo', '写真つき']].map(([v, l]) => `<option value="${v}" ${S.pvf === v ? 'selected' : ''}>${l}</option>`).join('')}</select><button onclick="location.href='tensaku-admin.html'">集計にもどる</button></div>`;
   }
-  const mine = S.qs.filter((q) => q.mine).length, done = S.qs.filter((q) => q.mine || q.n > 0).length, all = S.qs.length, pct = all ? Math.round(done / all * 100) : 0;
-  return `<div><div class="bar"><span class="who">${esc(S.name)}・${esc(S.job)}</span><span class="cnt">答えた数 ${mine}問</span></div>
-  <div class="prog"><i style="width:${pct}%"></i></div>
-  <div class="progt">${esc(S.job)}の問題 ${all}問のうち、みんなで ${done}問 見ました（${pct}%）</div>
+  return `<div><div class="bar"><span class="who">${esc(S.name)}・${esc(S.job)}</span></div>
+  <div class="box" id="progbox" style="padding:10px 14px;margin-top:8px">${progHTML()}</div>
   <div class="tools"><button onclick="listView()">📋 答えた問題を見直す</button><button onclick="S.names=[];startView()">名前・職種を変える</button></div></div>`;
 }
-function next(){
-  S.cur = S.queue[0] ? { q: S.queue[0], picked: null, verdict: '', comment: '', edit: false } : null;
+// つぎの問題はサーバーが決める：まだ誰も答えていない問題 → 答えが少ない問題。ほかの人に出している最中の問題はあとに回す
+async function next(){
+  app.innerHTML = header() + '<div class="box">つぎの問題を用意しています…</div>'; toTop(); loadProgress();
+  let { data, error } = await db.rpc('qr_next', { p_code: S.code, p_job: S.job, p_reviewer: S.name, p_skip: S.skip });
+  if (!error && !data && S.skip.length) { S.skip = []; ({ data, error } = await db.rpc('qr_next', { p_code: S.code, p_job: S.job, p_reviewer: S.name, p_skip: [] })) }
+  if (error) { app.innerHTML = header() + '<div class="box">通信できませんでした。<button class="btn" onclick="next()">もう一度</button></div>'; return }
+  const q = data ? S.qs.find((x) => x.id === data) : null;
+  S.cur = q ? { q, picked: null, verdict: '', comment: '', edit: false } : null;
   render(); toTop();
 }
 function openQ(id){
@@ -211,7 +227,7 @@ function render(){
     : `<div style="font-size:.95rem;margin-top:6px">まず上の問題に答えてください。答えると、正解と解説、意見を書く欄が出ます。</div>
        <button class="cant" onclick="pick(-1)">わからない・答えられない</button>
        <textarea id="cm" placeholder="${esc(PH)}">${esc(comment)}</textarea>`}
-    ${PREVIEW ? '' : edit ? `<button class="btn ghost" onclick="next()">直さずにもどる</button>` : `<button class="btn ghost" onclick="skip()">この問題はあとで（とばす）</button>`}
+    ${PREVIEW ? '' : edit ? `<button class="btn ghost" onclick="listView()">直さずに一覧へもどる</button>` : `<button class="btn ghost" onclick="skip()">この問題はあとで（とばす）</button>`}
   </section>`;
   const cm = $('#cm'); if (cm) cm.oninput = () => { S.cur.comment = cm.value };
   if (q.hasPhoto) loadPhoto(q.id);
@@ -225,7 +241,7 @@ async function loadPhoto(id){
   const el = $('#ph'); if (!el || S.cur?.q.id !== id) return;
   const w = el.querySelector('.wait');
   if (p?.photo) { const img = new Image(); img.alt = '問題の写真'; img.src = p.photo; img.onclick = zoom; w.replaceWith(img) } else w.textContent = '写真を読みこめませんでした';
-  const nx = PREVIEW ? pvList()[S.pvi + 1] : S.queue[1]; if (nx?.hasPhoto) getPhoto(nx.id);
+  const nx = PREVIEW ? pvList()[S.pvi + 1] : null; if (nx?.hasPhoto) getPhoto(nx.id);
 }
 function zoom(){ const p = S.photos[S.cur?.q.id]; if (!p) return; $('#zimg').src = p.full || p.photo; const z = $('#zoom'); z.hidden = false; z.classList.remove('x2'); z.scrollTo(0, 0); z.onclick = (e) => { if (e.target.tagName === 'IMG') z.classList.toggle('x2') } }
 function closeZoom(){ $('#zoom').hidden = true }
@@ -238,7 +254,7 @@ function setV(v){
   S.cur.verdict = S.cur.verdict === v ? '' : v;
   app.querySelectorAll('.v').forEach((b) => b.classList.toggle('on', (b.classList.contains('a') ? 'adopt' : 'reject') === S.cur.verdict));
 }
-function skip(){ const q = S.queue.shift(); S.queue.push(q); next() }
+function skip(){ S.skip.push(S.cur.q.id); next() }
 async function save(){
   const c = S.cur, cm = ($('#cm').value || '').trim(), err = $('#err');
   if (c.picked === -1 && !cm) { err.textContent = '答えられなかった理由を、意見・理由の欄に書いてください。'; $('#cm').focus(); return }
@@ -248,7 +264,7 @@ async function save(){
   const { error } = await db.rpc('qr_save', { p_code: S.code, p_reviewer: S.name, p_job: S.job, p_qid: c.q.id, p_picked: c.picked, p_verdict: c.verdict, p_comment: cm });
   if (error) { $('#save').disabled = false; err.textContent = '保存できませんでした。電波のよいところで、もう一度押してください。'; return }
   c.q.mine = { picked: c.picked, verdict: c.verdict, comment: cm };
-  if (!c.edit) { c.q.n++; S.queue = S.queue.filter((q) => q.id !== c.q.id) }
+  if (c.edit) { listView(); return }
   next();
 }
 
@@ -271,7 +287,7 @@ async function pvStart(msg){
   const { data, error } = await db.rpc('qr_admin', { p_code: S.code });
   if (error) { S.code = ''; return pvStart('合言葉がちがいます。') }
   ss.set('admin', S.code);
-  S.qs = data.questions;
+  S.qs = data.questions; loadProgress();
   const m = location.hash.match(/no=(\d+)/); if (m) S.pvi = Math.max(0, S.qs.findIndex((q) => q.no === +m[1]));
   pvShow();
 }
