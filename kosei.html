@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>手順書の確認</title>
+<style>
+:root{--bg:#eef3ef;--card:#fff;--fg:#1d2621;--sub:#5d6b63;--line:#d6dfd9;--accent:#1f6f54;--ok:#1d7a3e;--okbg:#e7f6ec;--ng:#b42318;--ngbg:#fdecea;
+--cur:#f6f7f6;--prop:#fff8e6;--propline:#f0d9a0;--propink:#7a5300;
+--f:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:17px;line-height:1.7;-webkit-text-size-adjust:100%;
+  padding:14px max(16px,env(safe-area-inset-right,0px)) 120px max(16px,env(safe-area-inset-left,0px))}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.3rem;margin:4px 0 0;line-height:1.5}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+label.t{display:block;font-weight:800;margin:14px 0 6px}
+input[type=text],textarea{width:100%;font:inherit;font-size:18px;padding:12px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--fg)}
+textarea{min-height:110px;line-height:1.6;resize:vertical;margin-top:8px}
+textarea::placeholder{color:#9aa3a0}
+.btn{display:block;width:100%;font:inherit;font-size:18px;font-weight:800;border:0;border-radius:14px;padding:15px;margin-top:14px;cursor:pointer;background:var(--accent);color:#fff}
+.btn:disabled{opacity:.5}
+.err{color:var(--ng);font-weight:700;margin-top:10px}
+.bar{background:var(--accent);color:#fff;border-radius:14px;padding:10px 14px;font-weight:800}
+.bar .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.bar .who{font-size:16px}.bar .cnt{font-size:15px;white-space:nowrap}
+.prog{height:8px;background:#fff;border-radius:4px;margin-top:8px;overflow:hidden}.prog i{display:block;height:100%;background:#3fb27f;transition:width .3s}
+.tabs{display:flex;gap:8px}.tabs button{flex:1;font:inherit;font-size:15px;font-weight:700;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:8px;color:var(--fg);cursor:pointer}
+.tabs button.on{border-color:var(--accent);background:var(--okbg);color:var(--accent)}
+.q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.q.done{border-color:#9fd3b4}
+.qh{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+.no{font-weight:800;color:var(--accent)}
+.tt{font-weight:800}
+.open{font-size:.9rem;color:#1c64b0;font-weight:700;text-decoration:none;white-space:nowrap}
+.qt{margin:0;font-size:1.02rem;font-weight:700}
+.cur{background:var(--cur);border-radius:10px;padding:8px 12px;font-size:.95rem}
+.prop{background:var(--prop);border:1.5px solid var(--propline);border-radius:10px;padding:8px 12px;font-size:.95rem}
+.cur b,.prop b{display:block;font-size:.8rem;color:var(--sub)}.prop b{color:var(--propink)}
+.prev{background:#eef5fd;border-radius:10px;padding:8px 12px;font-size:.92rem;color:#1c4f8a}
+.chs{display:grid;gap:8px}
+.ch{font:inherit;font-size:16px;font-weight:800;text-align:left;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:#fff;cursor:pointer;color:var(--fg)}
+.ch.on{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+.ch.on.ng{border-color:#8a948f;background:#f1f3f2;color:#3f4a45}
+.st{font-size:.88rem;font-weight:700;color:var(--sub);min-height:1.4em}
+.st.ok{color:var(--ok)}.st.ng{color:var(--ng)}
+.others{font-size:.85rem;color:var(--sub)}
+.empty{text-align:center;color:var(--sub);padding:24px 8px}
+#save{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:5;
+  font:inherit;font-size:18px;font-weight:800;border:0;border-radius:999px;padding:14px 22px;background:var(--accent);color:#fff;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:6px}
+#save.wait{background:#b26b00}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1d2621;color:#fff;border-radius:12px;padding:10px 16px;font-weight:700;font-size:15px;z-index:6;max-width:calc(100% - 32px);text-align:center}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<main id="app"><div class="box">読み込み中…</div></main>
+<button id="save" hidden>💾 保存</button>
+<div id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const db = supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3R3Ym56ampkbGxxc21sdnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzkzMDQsImV4cCI6MjA5NjQ1NTMwNH0.quP2UmR59c1ULUgZkqaq0kzeD8VlOY3cKH4ZaZJwtf0', {auth:{persistSession:false}});
+const HB = 'https://fuku2916.github.io/fukumimi-keijiban/#/p/';
+const CH = [['ok','提案どおり直す'],['ng','直さない（今のままでよい）'],['txt','答え・直し方を書く']];
+const ls = { get(k){ try { return localStorage.getItem('kosei_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { localStorage.setItem('kosei_'+k, v) } catch(e){} } };
+const old = (k) => { try { return localStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } };
+const S = { code: ls.get('code') || old('code'), name: ls.get('name') || old('name'), qs: [], tab: 'todo', ok: false };
+let pend = {}; try { pend = JSON.parse(ls.get('pending') || '{}') } catch(e){}
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app = $('#app');
+const hhmm = (d) => new Date(d).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+function normName(v){ return String(v || '').replace(/[\s　]+/g, '').replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60)) }
+let toastT; function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2500) }
+
+// ================= はじめの画面 =================
+function startView(msg){
+  $('#save').hidden = true;
+  app.innerHTML = `<h1>📋 手順書の確認のお願い</h1>
+  <div class="box">
+    <div>掲示板の「動画から作った手順書」で、AIが聞き取れなかったところや、はっきりしないところがあります。わかる範囲で答えてください。<br>答えは<b>選ぶたび・書くたびに自動で保存</b>されます。途中でやめても大丈夫です。</div>
+    <label class="t" for="code">① 合言葉</label>
+    <input type="text" id="code" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(S.code)}" placeholder="お知らせした合言葉">
+    <label class="t" for="name">② お名前</label>
+    <div style="font-size:.95rem;margin-bottom:6px">ひらがなでフルネームを入れてください。</div>
+    <input type="text" id="name" autocomplete="off" value="${esc(S.name)}" placeholder="例：ふくみみ はなこ">
+    <div class="err" id="err">${esc(msg || '')}</div>
+    <button class="btn" id="go">はじめる</button>
+  </div>`;
+  $('#go').onclick = async () => {
+    const code = $('#code').value.trim(), nm = normName($('#name').value);
+    $('#err').textContent = '';
+    if (!code) { $('#err').textContent = '合言葉を入れてください。'; return }
+    if (!nm) { $('#err').textContent = 'お名前を、ひらがなでフルネームで入れてください。'; return }
+    if (!/^[ぁ-ゟー]+$/.test(nm)) { $('#err').textContent = 'お名前は、ひらがなで入れてください（漢字やローマ字は使えません）。'; return }
+    S.code = code; S.name = nm; ls.set('code', code); ls.set('name', nm);
+    await load();
+  };
+}
+async function load(){
+  app.innerHTML = '<div class="box">質問を読みこんでいます…</div>';
+  const { data, error } = await db.rpc('pf_list', { p_code: S.code, p_reviewer: S.name });
+  if (error) return startView(error.message.includes('合言葉') ? '合言葉がちがいます。もう一度たしかめてください。' : '通信できませんでした。電波のよいところで、もう一度押してください。');
+  S.ok = true;
+  S.qs = data.map((q) => { const p = pend[q.no]; const m = q.mine || {}; return { ...q, choice: p ? p.choice : (m.choice || ''), body: p ? p.body : (m.body || ''), at: m.at } });
+  listView(); flush();
+}
+const answered = (q) => !!(q.choice || (q.body || '').trim());
+
+// ================= 質問の一覧 =================
+function listView(){
+  const n = S.qs.filter(answered).length, all = S.qs.length;
+  const shown = S.qs.filter((q) => S.tab === 'all' || !answered(q) || q._keep);
+  app.innerHTML = `<div class="bar"><div class="row"><span class="who">${esc(S.name)} さん</span><span class="cnt" id="cnt">${n} / ${all} 問</span></div><div class="prog"><i id="pg" style="width:${all ? n / all * 100 : 0}%"></i></div></div>
+  <div class="box" style="font-size:.95rem">「手順書を見る」で掲示板の手順書が開きます（HUKU BASE にログインしていると見られます）。<br>わからない質問は、とばしてください。</div>
+  <div class="tabs"><button data-t="todo" class="${S.tab === 'todo' ? 'on' : ''}">まだの質問</button><button data-t="all" class="${S.tab === 'all' ? 'on' : ''}">すべて（${all}）</button></div>
+  ${shown.map(card).join('') || '<div class="box empty">🎉 まだの質問はありません。ありがとうございました！<br>「すべて」で、答えを見直せます。</div>'}`;
+  app.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => { S.tab = b.dataset.t; S.qs.forEach((q) => delete q._keep); listView(); scrollTo(0, 0) });
+  app.querySelectorAll('.q').forEach(bind);
+  $('#save').hidden = false; saveBtn();
+}
+function card(q){
+  const noProp = !q.prop;
+  const chs = (noProp ? CH.filter((c) => c[0] !== 'ok') : CH);
+  return `<div class="q ${answered(q) ? 'done' : ''}" data-no="${q.no}">
+    <div class="qh"><span class="no">${q.no}</span><span class="tt">${esc(q.title)}</span>${q.post ? `<a class="open" href="${HB}${esc(q.post)}" target="_blank" rel="noopener">📄 手順書を見る</a>` : ''}</div>
+    <p class="qt">${esc(q.question)}</p>
+    ${q.cur ? `<div class="cur"><b>今の手順書</b>${esc(q.cur)}</div>` : ''}
+    ${q.prop ? `<div class="prop"><b>AIの直し案</b>${esc(q.prop)}</div>` : ''}
+    ${q.prev ? `<div class="prev">前に届いた答え：${esc(q.prev)}<br>（途中で切れているようです。もう一度教えてください）</div>` : ''}
+    <div class="chs">${chs.map(([v, t]) => `<button class="ch ${q.choice === v ? 'on' : ''} ${v === 'ng' ? 'ng' : ''}" data-v="${v}">${q.choice === v ? '✔ ' : ''}${t}</button>`).join('')}</div>
+    <textarea placeholder="答え・直し方を書いてください（「提案どおり」でも、気づいたことがあれば書いてください）" ${q.choice === 'txt' || (q.body || '').trim() ? '' : 'hidden'}>${esc(q.body)}</textarea>
+    <div class="st" data-st>${stText(q)}</div>
+    ${q.n ? `<div class="others">ほかに ${q.n} 人が答えています</div>` : ''}
+  </div>`;
+}
+function stText(q){
+  if (pend[q.no]) return '保存しています…';
+  if (q.at && answered(q)) return `✔ 保存しました（${hhmm(q.at)}）`;
+  return '';
+}
+function bind(el){
+  const q = S.qs.find((x) => x.no === +el.dataset.no), ta = $('textarea', el);
+  el.querySelectorAll('.ch').forEach((b) => b.onclick = () => {
+    const v = b.dataset.v; q.choice = q.choice === v ? '' : v; q._keep = true;
+    el.querySelectorAll('.ch').forEach((x) => { const on = x.dataset.v === q.choice; x.classList.toggle('on', on); x.textContent = (on ? '✔ ' : '') + CH.find((c) => c[0] === x.dataset.v)[1] });
+    ta.hidden = !(q.choice === 'txt' || (q.body || '').trim());
+    if (q.choice === 'txt') ta.focus();
+    queue(q, 0);
+  });
+  let t = null; ta.oninput = () => { q.body = ta.value; q._keep = true; clearTimeout(t); setState(q, '書いています…（手を止めると自動で保存）', ''); t = setTimeout(() => { t = null; queue(q, 0) }, 1200) };
+  ta.onblur = () => { if (t) { clearTimeout(t); t = null; queue(q, 0) } };
+}
+function setState(q, text, cls){
+  const el = app.querySelector(`.q[data-no="${q.no}"]`); if (!el) return;
+  const st = $('[data-st]', el); st.textContent = text; st.className = 'st ' + (cls || '');
+  el.classList.toggle('done', answered(q));
+  const n = S.qs.filter(answered).length; const c = $('#cnt'); if (c) c.textContent = `${n} / ${S.qs.length} 問`; const pg = $('#pg'); if (pg) pg.style.width = `${n / S.qs.length * 100}%`;
+}
+
+// ================= 保存（自動・やり直しつき） =================
+function keep(){ ls.set('pending', JSON.stringify(pend)) }
+function queue(q, delay){ pend[q.no] = { choice: q.choice || '', body: q.body || '' }; keep(); setState(q, '保存しています…', ''); saveBtn(); setTimeout(flush, delay || 0) }
+let busy = false;
+async function flush(){
+  if (busy || !S.ok) return; busy = true;
+  let failed = 0;
+  try {
+    for (const no of Object.keys(pend)) {
+      const p = pend[no], q = S.qs.find((x) => x.no === +no);
+      const { data, error } = await db.rpc('pf_save', { p_code: S.code, p_reviewer: S.name, p_no: +no, p_choice: p.choice, p_body: p.body });
+      if (error) {
+        failed++;
+        if (q) setState(q, error.message.includes('合言葉') ? '⚠ 合言葉が変わりました。ページを開きなおしてください' : '⚠ まだ保存できていません（電波が戻ると自動で保存します）', 'ng');
+        continue;
+      }
+      // 保存中にさらに書き足していたら、もう一度保存する
+      if (pend[no] && pend[no].choice === p.choice && pend[no].body === p.body) delete pend[no];
+      if (q) { q.at = data; setState(q, answered(q) ? `✔ 保存しました（${hhmm(data)}）` : '答えを消しました', 'ok') }
+    }
+  } finally { busy = false; keep(); saveBtn() }
+  if (Object.keys(pend).length) setTimeout(flush, failed ? 8000 : 300);
+  return failed;
+}
+function saveBtn(){
+  const n = Object.keys(pend).length, b = $('#save');
+  b.classList.toggle('wait', n > 0);
+  b.textContent = n ? `💾 保存（${n}）` : '💾 保存';
+}
+$('#save').onclick = async () => {
+  // 書きかけの欄も今すぐ保存する
+  app.querySelectorAll('.q').forEach((el) => { const q = S.qs.find((x) => x.no === +el.dataset.no), ta = $('textarea', el); if (q && ta.value !== (q.body || '')) { q.body = ta.value; pend[q.no] = { choice: q.choice || '', body: q.body } } });
+  keep();
+  if (!Object.keys(pend).length) { toast('✔ すべて保存されています'); return }
+  $('#save').textContent = '保存しています…';
+  const failed = await flush();
+  toast(failed || Object.keys(pend).length ? '⚠ 電波が弱く、まだ保存できていません。自動でやり直します' : '✔ すべて保存しました');
+};
+addEventListener('online', flush);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush() });
+setInterval(() => { if (Object.keys(pend).length) flush() }, 15000);
+
+if (S.code && S.name) load(); else startView();
+</script>
+</body></html>
