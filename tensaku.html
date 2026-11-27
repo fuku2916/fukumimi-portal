@@ -22,7 +22,11 @@ textarea::placeholder{color:#9aa3a0}
 .btn{display:block;width:100%;font:inherit;font-size:18px;font-weight:800;border:0;border-radius:14px;padding:15px;margin-top:14px;cursor:pointer;background:var(--accent);color:#fff}
 .btn:disabled{opacity:.5}
 .btn.ghost{background:#fff;color:var(--fg);border:2px solid var(--line);font-weight:700;font-size:16px;padding:11px}
-.jobs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.jobs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pts{background:#f3f7f4;border-radius:12px;padding:10px 12px;font-size:.95rem}
+.pts b{display:block;font-size:.85rem;color:var(--accent)}
+.pts ul{margin:4px 0 0;padding-left:1.2em}
+.aim{font-size:.85rem;color:var(--sub)}
 .job{font:inherit;font-size:18px;font-weight:800;padding:16px 8px;border-radius:14px;border:2px solid var(--line);background:#fff;cursor:pointer;line-height:1.4;color:var(--fg)}
 .job small{display:block;font-size:13px;font-weight:600;color:var(--sub)}
 .job.on{border-color:var(--accent);background:var(--okbg)}
@@ -84,7 +88,8 @@ textarea::placeholder{color:#9aa3a0}
 <script>
 const db = supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3Y3R3Ym56ampkbGxxc21sdnFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzkzMDQsImV4cCI6MjA5NjQ1NTMwNH0.quP2UmR59c1ULUgZkqaq0kzeD8VlOY3cKH4ZaZJwtf0', {auth:{persistSession:false}});
 const PH = '回答できない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。\n\nほかにも、まちがい・当院のやり方とちがうところ・わかりにくい言葉などがあれば、書いてください。';
-const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師'};
+const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師', '医師': '記述式の質問'};
+const PH_OPEN = 'ここに答えを書いてください（箇条書きで大丈夫です）。\n\n答えられない場合は、この欄に、『出題の意図がわからないので回答できない』『当院では決まっていないので院長と相談が必要』など、その理由を書いてください。';
 const NUM = '①②③④';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
 const ls = { get(k){ try { return localStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { localStorage.setItem('tensaku_'+k, v) } catch(e){} } };
@@ -150,7 +155,7 @@ async function loadProgress(){
 }
 function progHTML(){
   const P = S.progress || {};
-  return `<div class="progt" style="margin-top:0">みんなの到達率</div>` + ['クラーク', 'ナース'].map((j) => {
+  return `<div class="progt" style="margin-top:0">みんなの到達率</div>` + ['クラーク', 'ナース', '医師'].filter((j) => j !== '医師' || (S.progress && S.progress['医師'])).map((j) => {
     const p = P[j] || { all: 0, seen: 0 }, pct = p.all ? Math.round(p.seen / p.all * 100) : 0;
     return `<div class="pj"><span class="pjl">${j}</span><span class="pjb"><i style="width:${pct}%"></i></span><span class="pjv">${pct}%</span></div>`;
   }).join('');
@@ -162,7 +167,7 @@ function header(){
     <div class="progt">スタッフと同じ画面です。答えたり意見を書いたりしても、保存されません。</div>
     <div class="box" id="progbox" style="padding:10px 14px;margin-top:8px">${progHTML()}</div>
     <div class="tools"><button onclick="pvGo(-1)">◀ まえ</button><input id="pvno" type="text" inputmode="numeric" placeholder="No.で開く" onchange="pvJump(this.value)"><button onclick="pvGo(1)">つぎ ▶</button></div>
-    <div class="tools"><select onchange="S.pvf=this.value;S.pvi=0;pvShow()">${[['', 'すべて（500問）'], ['クラーク', 'クラーク向け'], ['ナース', 'ナース向け'], ['クラーク・ナース', '両方向け'], ['photo', '写真つき']].map(([v, l]) => `<option value="${v}" ${S.pvf === v ? 'selected' : ''}>${l}</option>`).join('')}</select><button onclick="location.href='tensaku-admin.html'">集計にもどる</button></div>`;
+    <div class="tools"><select onchange="S.pvf=this.value;S.pvi=0;pvShow()">${[['', `すべて（${S.qs.length}問）`], ['クラーク', 'クラーク向け'], ['ナース', 'ナース向け'], ['クラーク・ナース', '両方向け'], ['医師', '医師向け'], ['photo', '写真つき']].map(([v, l]) => `<option value="${v}" ${S.pvf === v ? 'selected' : ''}>${l}</option>`).join('')}</select><button onclick="location.href='tensaku-admin.html'">集計にもどる</button></div>`;
   }
   return `<div><div class="bar"><span class="who">${esc(S.name)}・${esc(S.job)}</span></div>
   <div class="box" id="progbox" style="padding:10px 14px;margin-top:8px">${progHTML()}</div>
@@ -185,7 +190,7 @@ function openQ(id){
 }
 function listView(){
   const mine = S.qs.filter((q) => q.mine);
-  app.innerHTML = header() + `<div class="box"><b>答えた問題（${mine.length}問）</b><div class="list">${mine.length ? mine.map((q) => `<a href="#" onclick="openQ('${q.id}');return false">No.${q.no}　${esc(q.question.slice(0, 40))}…<small>${q.mine.verdict === 'adopt' ? '👍 採用した方が良い' : q.mine.verdict === 'reject' ? '👎 不採用にした方が良い' : '意見なし'}${q.mine.comment ? '・コメントあり' : ''}</small></a>`).join('') : '<p>まだありません。</p>'}</div>
+  app.innerHTML = header() + `<div class="box"><b>答えた問題（${mine.length}問）</b><div class="list">${mine.length ? mine.map((q) => `<a href="#" onclick="openQ('${q.id}');return false">No.${q.no}　${esc(q.question.slice(0, 40))}…<small>${q.kind === 'open' ? '答えを書いた' : (q.mine.verdict === 'adopt' ? '👍 採用した方が良い' : q.mine.verdict === 'reject' ? '👎 不採用にした方が良い' : '意見なし') + (q.mine.comment ? '・コメントあり' : '')}</small></a>`).join('') : '<p>まだありません。</p>'}</div>
   <button class="btn" onclick="next()">問題にもどる</button></div>`;
   toTop();
 }
@@ -205,9 +210,30 @@ function card(q, picked){
     ${shown ? `<div class="ans ${picked === 0 ? '' : 'ng'}"><p class="res">${picked === 0 ? '⭕ 正解！ +3P' : picked === -1 ? `正解は ${NUM[rightPos]}` : `❌ ざんねん　正解は ${NUM[rightPos]}`}</p><p class="ex">${esc(q.explanation)}</p></div>` : ''}
   </article>`;
 }
+function openCard(q){
+  const clinic = q.clinic && q.clinic !== '全体' ? q.clinic : '法人全体';
+  return `<article class="q">
+    <header class="qh"><span class="no">No.${q.no}</span><span class="tag">医師への質問</span><span class="tag">${esc(clinic)}</span>${q.area ? `<span class="tag soft">${esc(q.area)}</span>` : ''}</header>
+    <p class="qt">${esc(q.question)}</p>
+    ${(q.points || []).length ? `<div class="pts"><b>答えに入れていただきたいこと</b><ul>${q.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${q.aim ? `<div class="aim">📘 この答えから作るもの：${esc(q.aim)}</div>` : ''}
+  </article>`;
+}
+function renderOpen(){
+  const { q, comment, edit } = S.cur;
+  app.innerHTML = header() + openCard(q) + `<section class="rv">
+    <div class="hd">✏️ 答え</div>
+    <textarea id="cm" style="min-height:220px" placeholder="${esc(PH_OPEN)}">${esc(comment)}</textarea>
+    <div class="err" id="err"></div>
+    <button class="btn" id="save" onclick="save()">${PREVIEW ? 'つぎの質問へ（確認画面なので保存しません）' : edit ? '直して保存する' : '保存して、つぎの質問へ'}</button>
+    ${PREVIEW ? '' : edit ? `<button class="btn ghost" onclick="listView()">直さずに一覧へもどる</button>` : `<button class="btn ghost" onclick="skip()">この質問はあとで（とばす）</button>`}
+  </section>`;
+  const cm = $('#cm'); cm.oninput = () => { S.cur.comment = cm.value };
+}
 function render(){
+  if (S.cur && S.cur.q.kind === 'open') return renderOpen();
   if (!S.cur) {
-    app.innerHTML = header() + `<div class="box" style="text-align:center"><div style="font-size:52px">🎉</div><b>${esc(S.job)}の問題は、ぜんぶ答えました。</b><br>ご協力ありがとうございました。<br>答えた問題は「答えた問題を見直す」から直せます。</div>`;
+    app.innerHTML = header() + `<div class="box" style="text-align:center"><div style="font-size:52px">🎉</div><b>${esc(S.job)}${S.job === '医師' ? '向けの質問' : 'の問題'}は、ぜんぶ答えました。</b><br>ご協力ありがとうございました。<br>答えた問題は「答えた問題を見直す」から直せます。</div>`;
     return;
   }
   const { q, picked, verdict, comment, edit } = S.cur, shown = picked !== null;
@@ -257,8 +283,11 @@ function setV(v){
 function skip(){ S.skip.push(S.cur.q.id); next() }
 async function save(){
   const c = S.cur, cm = ($('#cm').value || '').trim(), err = $('#err');
+  if (c.q.kind === 'open' && !cm) { err.textContent = '答えを書いてください。答えられない場合は、その理由を書いてください。'; $('#cm').focus(); return }
+  if (c.q.kind !== 'open') {
   if (c.picked === -1 && !cm) { err.textContent = '答えられなかった理由を、意見・理由の欄に書いてください。'; $('#cm').focus(); return }
   if (!c.verdict && !cm) { err.textContent = '「採用した方が良いと思う」「不採用にした方が良いと思う」のどちらかを押してください。'; return }
+  }
   if (PREVIEW) return pvGo(1);
   $('#save').disabled = true; err.textContent = '';
   const { error } = await db.rpc('qr_save', { p_code: S.code, p_reviewer: S.name, p_job: S.job, p_qid: c.q.id, p_picked: c.picked, p_verdict: c.verdict, p_comment: cm });

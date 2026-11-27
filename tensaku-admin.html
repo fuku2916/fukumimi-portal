@@ -100,6 +100,7 @@ function draw(){
   const ppl = Object.values(people).sort((a, b) => b.n - a.n);
   const tg = (t) => { const qs = Q.filter((q) => q.target === t); const s = qs.filter((q) => by[q.id]).length; return { n: qs.length, s, p: qs.length ? Math.round(s / qs.length * 100) : 0 } };
   const T = { 'クラーク向け': tg('クラーク'), 'ナース向け': tg('ナース'), '両方向け': tg('クラーク・ナース') };
+  if (Q.some((q) => q.target === '医師')) T['医師向け（記述式）'] = tg('医師');
   const rejQ = Q.filter((q) => (by[q.id] || []).some((a) => a.verdict === 'reject')).length;
   const cantQ = Q.filter((q) => (by[q.id] || []).some((a) => a.picked === -1)).length;
 
@@ -120,7 +121,7 @@ function draw(){
 
   <h2>問題ごと</h2>
   <div class="filters">
-    ${[['all', 'すべて'], ['ans', '回答あり'], ['rej', '👎不採用あり'], ['cant', '答えられないあり'], ['cm', 'コメントあり'], ['none', 'まだ誰も']].map(([k, l]) => `<button class="chip ${F === k ? 'on' : ''}" onclick="F='${k}';SHOW=40;draw()">${l}</button>`).join('')}
+    ${[['all', 'すべて'], ['doc', '医師向け'], ['ans', '回答あり'], ['rej', '👎不採用あり'], ['cant', '答えられないあり'], ['cm', 'コメントあり'], ['none', 'まだ誰も']].map(([k, l]) => `<button class="chip ${F === k ? 'on' : ''}" onclick="F='${k}';SHOW=40;draw()">${l}</button>`).join('')}
     <input id="sq" placeholder="ことばで探す・No" value="${esc(SEARCH)}" style="flex:1;min-width:140px">
   </div>
   <div id="ql"></div>`;
@@ -131,6 +132,7 @@ function list(by){
   const s = SEARCH.trim();
   const qs = D.questions.filter((q) => {
     const a = by[q.id] || [];
+    if (F === 'doc' && q.target !== '医師') return false;
     if (F === 'ans' && !a.length) return false;
     if (F === 'rej' && !a.some((x) => x.verdict === 'reject')) return false;
     if (F === 'cant' && !a.some((x) => x.picked === -1)) return false;
@@ -144,8 +146,9 @@ function list(by){
     return `<div class="q"><div class="tg">No.${q.no}　${esc(q.target)}向け　${esc(q.clinic || '')}　${esc(q.area || '')}　回答${a.length}人</div>
       ${q.hasPhoto ? `<div class="ph" data-id="${q.id}"><div class="phw">写真を読みこみ中…</div></div>` : ''}
       <div class="qt">${esc(q.question)}</div>
-      <ol class="cl">${q.choices.map((c, k) => `<li class="${k === 0 ? 'r' : ''}"><span class="n">${'①②③④'[k]}</span><span>${esc(c)}</span>${k === 0 ? '<span class="mk">正解</span>' : ''}</li>`).join('')}</ol>
-      <div class="exq">${esc(q.explanation)}</div>
+      ${q.kind === 'open' ? `${(q.points || []).length ? `<div class="exq"><b style="font-size:13px">答えに入れてほしいこと</b><br>${q.points.map((x) => '・' + esc(x)).join('<br>')}</div>` : ''}${q.aim ? `<div style="font-size:14px;color:var(--sub);margin-top:4px">📘 この答えから作るもの：${esc(q.aim)}</div>` : ''}`
+      : `<ol class="cl">${q.choices.map((c, k) => `<li class="${k === 0 ? 'r' : ''}"><span class="n">${'①②③④'[k]}</span><span>${esc(c)}</span>${k === 0 ? '<span class="mk">正解</span>' : ''}</li>`).join('')}</ol>
+      <div class="exq">${esc(q.explanation)}</div>`}
       ${q.memo ? `<div class="memo">作成メモ：${esc(q.memo)}</div>` : ''}
       <div style="font-size:13px;color:var(--sub);margin-top:4px">${esc(q.source || '')}　<a href="tensaku.html?preview#no=${q.no}" style="font-weight:700;color:#1c64b0">👀 スタッフの画面で見る</a></div>
       ${a.map((x) => `<div class="a"><b>${esc(x.reviewer)}</b><span style="color:var(--sub);font-size:13px">${esc(x.job)}・${jp(x.at)}</span><br>${pickPill(x.picked)}${vPill(x.verdict)}${x.comment ? `<div class="cm">${esc(x.comment)}</div>` : ''}</div>`).join('')}
