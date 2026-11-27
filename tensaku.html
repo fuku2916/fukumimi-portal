@@ -27,6 +27,9 @@ textarea::placeholder{color:#9aa3a0}
 .pts b{display:block;font-size:.85rem;color:var(--accent)}
 .pts ul{margin:4px 0 0;padding-left:1.2em}
 .aim{font-size:.85rem;color:var(--sub)}
+.ai{background:#fff;border:2px solid #cfe0f5;border-radius:12px;padding:12px 14px;font-size:1rem;line-height:1.75;white-space:pre-wrap}
+.ai .lb{display:block;white-space:normal;font-size:.85rem;font-weight:800;color:#1c64b0;margin-bottom:4px}
+.ainote{background:#eef5fd;border-radius:10px;padding:9px 12px;font-size:.92rem;font-weight:700;color:#1c4f8a;line-height:1.6}
 .job{font:inherit;font-size:18px;font-weight:800;padding:16px 8px;border-radius:14px;border:2px solid var(--line);background:#fff;cursor:pointer;line-height:1.4;color:var(--fg)}
 .job small{display:block;font-size:13px;font-weight:600;color:var(--sub)}
 .job.on{border-color:var(--accent);background:var(--okbg)}
@@ -90,6 +93,8 @@ const db = supabase.createClient('https://hwctwbnzjjdllqsmlvqm.supabase.co','eyJ
 const PH = '回答できない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。\n\nほかにも、まちがい・当院のやり方とちがうところ・わかりにくい言葉などがあれば、書いてください。';
 const JOBS = {'クラーク': '受付・会計・電話', 'ナース': '看護師', '医師': '記述式の質問'};
 const PH_OPEN = 'ここに答えを書いてください（箇条書きで大丈夫です）。\n\n答えられない場合は、この欄に、『出題の意図がわからないので回答できない』など、その理由を書いてください。';
+const PH_AI = '直すところを書いてください（箇条書きで大丈夫です）。\n例：「3つ目の目安は48時間ではなく24時間」「〇〇の説明が足りない」\n\n「（当院の決まりを書き入れてください）」のところは、わかる範囲で書いてください。\n質問の意味がわからない場合は、その理由を書いてください。';
+const AI_NOTE = 'この回答はAIで作成しました。医学的に間違えているところや、質問の意味が不明瞭なところがあれば教えてください。';
 const NUM = '①②③④';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
 const ls = { get(k){ try { return localStorage.getItem('tensaku_'+k) || '' } catch(e){ return '' } }, set(k,v){ try { localStorage.setItem('tensaku_'+k, v) } catch(e){} } };
@@ -190,7 +195,7 @@ function openQ(id){
 }
 function listView(){
   const mine = S.qs.filter((q) => q.mine);
-  app.innerHTML = header() + `<div class="box"><b>答えた問題（${mine.length}問）</b><div class="list">${mine.length ? mine.map((q) => `<a href="#" onclick="openQ('${q.id}');return false">No.${q.no}　${esc(q.question.slice(0, 40))}…<small>${q.kind === 'open' ? '答えを書いた' : (q.mine.verdict === 'adopt' ? '👍 採用した方が良い' : q.mine.verdict === 'reject' ? '👎 不採用にした方が良い' : '意見なし') + (q.mine.comment ? '・コメントあり' : '')}</small></a>`).join('') : '<p>まだありません。</p>'}</div>
+  app.innerHTML = header() + `<div class="box"><b>答えた問題（${mine.length}問）</b><div class="list">${mine.length ? mine.map((q) => `<a href="#" onclick="openQ('${q.id}');return false">No.${q.no}　${esc(q.question.slice(0, 40))}…<small>${q.kind === 'open' ? (q.explanation ? (q.mine.verdict === 'adopt' ? '👍 この解答例で良い' : q.mine.verdict === 'reject' ? '✏️ 直すところがある' : '意見を書いた') : '答えを書いた') : (q.mine.verdict === 'adopt' ? '👍 採用した方が良い' : q.mine.verdict === 'reject' ? '👎 不採用にした方が良い' : '意見なし') + (q.mine.comment ? '・コメントあり' : '')}</small></a>`).join('') : '<p>まだありません。</p>'}</div>
   <button class="btn" onclick="next()">問題にもどる</button></div>`;
   toTop();
 }
@@ -215,15 +220,23 @@ function openCard(q){
   return `<article class="q">
     <header class="qh"><span class="no">No.${q.no}</span><span class="tag">医師への質問</span><span class="tag">${esc(clinic)}</span>${q.area ? `<span class="tag soft">${esc(q.area)}</span>` : ''}</header>
     <p class="qt">${esc(q.question)}</p>
-    ${(q.points || []).length ? `<div class="pts"><b>答えに入れていただきたいこと</b><ul>${q.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${q.explanation ? `<div class="ai"><span class="lb">🤖 AIが作った解答例</span>${esc(q.explanation)}</div>
+    <div class="ainote">${esc(AI_NOTE)}</div>` : (q.points || []).length ? `<div class="pts"><b>答えに入れていただきたいこと</b><ul>${q.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
     ${q.aim ? `<div class="aim">📘 この答えから作るもの：${esc(q.aim)}</div>` : ''}
   </article>`;
 }
 function renderOpen(){
-  const { q, comment, edit } = S.cur;
+  const { q, comment, edit, verdict } = S.cur, ai = !!q.explanation;
   app.innerHTML = header() + openCard(q) + `<section class="rv">
-    <div class="hd">✏️ 答え</div>
-    <textarea id="cm" style="min-height:220px" placeholder="${esc(PH_OPEN)}">${esc(comment)}</textarea>
+    ${ai ? `<div class="hd">✏️ この解答例について</div>
+    <div class="vd">
+      <button class="v a ${verdict === 'adopt' ? 'on' : ''}" onclick="setV('adopt')">👍 この解答例で良い</button>
+      <button class="v r ${verdict === 'reject' ? 'on' : ''}" onclick="setV('reject')">✏️ 直すところがある</button>
+    </div>
+    <div class="step">直すところ・足りないところ</div>
+    <textarea id="cm" style="min-height:200px" placeholder="${esc(PH_AI)}">${esc(comment)}</textarea>`
+    : `<div class="hd">✏️ 答え</div>
+    <textarea id="cm" style="min-height:220px" placeholder="${esc(PH_OPEN)}">${esc(comment)}</textarea>`}
     <div class="err" id="err"></div>
     <button class="btn" id="save" onclick="save()">${PREVIEW ? 'つぎの質問へ（確認画面なので保存しません）' : edit ? '直して保存する' : '保存して、つぎの質問へ'}</button>
     ${PREVIEW ? '' : edit ? `<button class="btn ghost" onclick="listView()">直さずに一覧へもどる</button>` : `<button class="btn ghost" onclick="skip()">この質問はあとで（とばす）</button>`}
@@ -283,7 +296,10 @@ function setV(v){
 function skip(){ S.skip.push(S.cur.q.id); next() }
 async function save(){
   const c = S.cur, cm = ($('#cm').value || '').trim(), err = $('#err');
-  if (c.q.kind === 'open' && !cm) { err.textContent = '答えを書いてください。答えられない場合は、その理由を書いてください。'; $('#cm').focus(); return }
+  if (c.q.kind === 'open' && c.q.explanation) {
+    if (!c.verdict && !cm) { err.textContent = '「この解答例で良い」「直すところがある」のどちらかを押してください。'; return }
+    if (c.verdict === 'reject' && !cm) { err.textContent = '直すところを書いてください。'; $('#cm').focus(); return }
+  } else if (c.q.kind === 'open' && !cm) { err.textContent = '答えを書いてください。答えられない場合は、その理由を書いてください。'; $('#cm').focus(); return }
   if (c.q.kind !== 'open') {
   if (c.picked === -1 && !cm) { err.textContent = '答えられなかった理由を、意見・理由の欄に書いてください。'; $('#cm').focus(); return }
   if (!c.verdict && !cm) { err.textContent = '「採用した方が良いと思う」「不採用にした方が良いと思う」のどちらかを押してください。'; return }

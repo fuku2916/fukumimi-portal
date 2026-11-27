@@ -87,7 +87,7 @@ async function go(code){
 }
 const jp = (t) => new Date(t).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const pickPill = (p) => p === 0 ? '<span class="pill p-ok">正解</span>' : p === -1 ? '<span class="pill p-na">答えられない</span>' : p == null ? '' : '<span class="pill p-ng">不正解</span>';
-const vPill = (v) => v === 'adopt' ? '<span class="pill p-ad">👍 採用した方が良い</span>' : v === 'reject' ? '<span class="pill p-rj">👎 不採用にした方が良い</span>' : '';
+const vPill = (v, k) => k === 'open' ? (v === 'adopt' ? '<span class="pill p-ad">👍 この解答例で良い</span>' : v === 'reject' ? '<span class="pill p-rj">✏️ 直すところがある</span>' : '') : v === 'adopt' ? '<span class="pill p-ad">👍 採用した方が良い</span>' : v === 'reject' ? '<span class="pill p-rj">👎 不採用にした方が良い</span>' : '';
 
 function draw(){
   const Q = D.questions, A = D.answers;
@@ -146,12 +146,12 @@ function list(by){
     return `<div class="q"><div class="tg">No.${q.no}　${esc(q.target)}向け　${esc(q.clinic || '')}　${esc(q.area || '')}　回答${a.length}人</div>
       ${q.hasPhoto ? `<div class="ph" data-id="${q.id}"><div class="phw">写真を読みこみ中…</div></div>` : ''}
       <div class="qt">${esc(q.question)}</div>
-      ${q.kind === 'open' ? `${(q.points || []).length ? `<div class="exq"><b style="font-size:13px">答えに入れてほしいこと</b><br>${q.points.map((x) => '・' + esc(x)).join('<br>')}</div>` : ''}${q.aim ? `<div style="font-size:14px;color:var(--sub);margin-top:4px">📘 この答えから作るもの：${esc(q.aim)}</div>` : ''}`
+      ${q.kind === 'open' ? `${q.explanation ? `<div class="exq"><b style="font-size:13px">🤖 AIが作った解答例</b><br>${esc(q.explanation).replace(/\n/g, '<br>')}</div>` : ''}${(q.points || []).length ? `<div class="exq"><b style="font-size:13px">答えに入れてほしいこと</b><br>${q.points.map((x) => '・' + esc(x)).join('<br>')}</div>` : ''}${q.aim ? `<div style="font-size:14px;color:var(--sub);margin-top:4px">📘 この答えから作るもの：${esc(q.aim)}</div>` : ''}`
       : `<ol class="cl">${q.choices.map((c, k) => `<li class="${k === 0 ? 'r' : ''}"><span class="n">${'①②③④'[k]}</span><span>${esc(c)}</span>${k === 0 ? '<span class="mk">正解</span>' : ''}</li>`).join('')}</ol>
       <div class="exq">${esc(q.explanation)}</div>`}
       ${q.memo ? `<div class="memo">作成メモ：${esc(q.memo)}</div>` : ''}
       <div style="font-size:13px;color:var(--sub);margin-top:4px">${esc(q.source || '')}　<a href="tensaku.html?preview#no=${q.no}" style="font-weight:700;color:#1c64b0">👀 スタッフの画面で見る</a></div>
-      ${a.map((x) => `<div class="a"><b>${esc(x.reviewer)}</b><span style="color:var(--sub);font-size:13px">${esc(x.job)}・${jp(x.at)}</span><br>${pickPill(x.picked)}${vPill(x.verdict)}${x.comment ? `<div class="cm">${esc(x.comment)}</div>` : ''}</div>`).join('')}
+      ${a.map((x) => `<div class="a"><b>${esc(x.reviewer)}</b><span style="color:var(--sub);font-size:13px">${esc(x.job)}・${jp(x.at)}</span><br>${pickPill(x.picked)}${vPill(x.verdict, q.kind)}${x.comment ? `<div class="cm">${esc(x.comment)}</div>` : ''}</div>`).join('')}
     </div>`;
   }).join('') + (qs.length > SHOW ? `<button class="btn ghost more" onclick="SHOW+=60;list(window._by)">もっと見る（残り${qs.length - SHOW}問）</button>` : '');
   window._by = by;
